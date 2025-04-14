@@ -1,26 +1,53 @@
 > If you see this section, you've just created a repository using [PoC Innovation's Open-Source project template](https://github.com/PoCInnovation/open-source-project-template). Check the [getting started guide](./.github/getting-started.md).
 
+## Development Status
+
+AsyncFlow is currently under prototype development.
+
 # AsyncFlow
 
-[Project's description]
+AsyncFlow, a JS framework that simplifies asynchronous task management by automating workflows on the cloud (AWS, Google Cloud, Azure), focusing on scalability and cost optimization.
+We provide an SDK to interact with your cloud provider's API.
 
-## How does it work?
+## Our Goals
 
-[Explain how this project is working]
+- **Decrease Complexity:**
+  Reduce the requirements for extensive configurations and simplify troubleshooting on the developer's side. No more worker queues and setting up infrastructure.
+- **Improve Deployment Speed:**
+  Enable tasks to run on-demand directly from the cloud environment.
+- **Maintain Clear Monitoring:**
+  Deliver ongoing, real-time tracking of all active workflows.
+
+### How does it work?
+
+It works.
 
 ## Getting Started
 
 ### Installation
 
 [Explain how to install all of the project's dependencies]
+AsyncFlow presents itself as a node package (supposedly).
+```bash
+npm install asyncflow
+```
 
 ### Quickstart
 
-[Explain how to run this project]
+Boilerplate:
+```ts
+import { AsyncFlow } from "asyncflow/sdk";
+```
 
 ### Usage
 
-[Explain how to use this project]
+Boilerplate:
+```ts
+import { AsyncFlow } from "asyncflow/sdk";
+
+AsyncFlow("mail")
+```
+
 
 ## Get involved
 
@@ -31,7 +58,7 @@ If you're interested in how the project is organized at a higher level, please c
 ## Our PoC team ❤️
 
 Developers
-| [<img src="https://github.com/MrZalTy.png?size=85" width=85><br><sub>[Developer's name]</sub>](https://github.com/MrZalTy) | [<img src="https://github.com/MrZalTy.png?size=85" width=85><br><sub>[Developer's name]</sub>](https://github.com/MrZalTy) | [<img src="https://github.com/MrZalTy.png?size=85" width=85><br><sub>[Developer's name]</sub>](https://github.com/MrZalTy)
+| [<img src=".github/assets/pierre.png" width=85><br><sub>Pierre Riss</sub>](https://github.com/MrZalTy) | [<img src=".github/assets/loan.jpeg" width=85><br><sub>Loan Riyanto</sub>](https://github.com/MrZalTy) | [<img src=".github/assets/laurent.jpg" width=85><br><sub>Laurent Gonzalez</sub>](https://github.com/MrZalTy)
 | :---: | :---: | :---: |
 
 Manager
