@@ -1,0 +1,16 @@
+{
+  "name": "asyncflow-client",
+  "version": "1.0.0",
+  "description": "AsyncFlow client",
+  "bin": {
+    "mycli": "./bin/cli.js"
+  },
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  },
+  "dependencies": {
+    "mustache": "^4.2.0",
+    "yargs": "^18.0.0"
+  }
+}

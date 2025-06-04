@@ -1,0 +1,8 @@
+public class {{handlerName}} implements RequestHandler<Object, ApiGatewayResponse> {
+    public ApiGatewayResponse handleRequest(Object input, Context context) {
+        return ApiGatewayResponse.builder()
+            .setStatusCode(200)
+            .setObjectBody("Hello from Lambda!")
+            .build();
+    }
+}
