@@ -32,7 +32,7 @@ export const builder = (yargs) =>{
 }
 
 export const handler = (argv) =>{
-    const fileName = argv.file + '.' + argv.language.extension
+    const fileName = argv.language.filename + '.' + argv.language.extension
     const fullPath = ASYNCFLOW_FOLDER_NAME + '/' + argv.file + '/' + fileName
 
     try {
@@ -43,7 +43,7 @@ export const handler = (argv) =>{
             console.log('Job already exists')
             return
         }
-        const generatedTemplate = generateHandler(argv.file, argv.language.language)
+        const generatedTemplate = generateHandler(argv.language.language)
         fs.writeFileSync(fullPath, generatedTemplate)
         console.log('File created', fullPath)
     } catch (err){

@@ -8,11 +8,13 @@ export const TEMPLATE_PATH = resolve(DIRNAME, 'config', 'templates')
 export const ASYNCFLOW_LANGUAGES = [
     {
       language: 'python',
-      extension: 'py'
+      extension: 'py',
+      filename: 'lambda_function'
     },
     {
-      language: 'go',
-      extension: 'go'
+      language: 'ruby',
+      extension: 'rb',
+      filename: 'lambda_function'
     },
     {
       language: 'java',
@@ -20,7 +22,8 @@ export const ASYNCFLOW_LANGUAGES = [
     },
     {
       language: 'node',
-      extension: 'js'
+      extension: 'mjs',
+      filename: 'index'
     }
   ];
 

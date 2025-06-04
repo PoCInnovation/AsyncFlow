@@ -10,7 +10,6 @@
     "test": "node --test"
   },
   "dependencies": {
-    "mustache": "^4.2.0",
     "yargs": "^18.0.0"
   }
 }
