@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "AsyncFlow client",
   "bin": {
-    "mycli": "./bin/cli.js"
+    "asyncflow-cli": "./bin/cli.js"
   },
   "type": "module",
   "scripts": {
