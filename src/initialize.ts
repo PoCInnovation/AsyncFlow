@@ -1,10 +1,3 @@
-/*
-** EPITECH PROJECT, 2025
-** AsyncFlow
-** File description:
-** src/initialize.ts
-*/
-
 import {
   CreateTableCommand,
   DescribeTableCommand,
@@ -17,6 +10,7 @@ import "dotenv/config";
 import fs from "node:fs";
 import AdmZip from "adm-zip";
 import { AWS_ACCESS_KEY, AWS_SECRET_KEY } from "./utils/constants";
+import { isEnvironmentValid } from "./utils/credentials";
 
 function getIntegrityHash(zipPath: string) {
   const buffer = fs.readFileSync(zipPath);
@@ -66,18 +60,13 @@ async function createAsyncflowTable(client: DynamoDBClient) {
 }
 
 export async function initializeAsyncFlow() {
-  if (AWS_SECRET_KEY === undefined || AWS_ACCESS_KEY === undefined) {
-    console.error(
-      "[ASYNCFLOW]: No aws secret or access key provided, please check relevent documentation.",
-    );
-    return;
-  }
+  if (!isEnvironmentValid()) return;
 
   const client = new DynamoDBClient({
     region: "eu-west-3",
     credentials: {
-      accessKeyId: AWS_ACCESS_KEY,
-      secretAccessKey: AWS_SECRET_KEY,
+      accessKeyId: AWS_ACCESS_KEY!,
+      secretAccessKey: AWS_SECRET_KEY!,
     },
   });
 
