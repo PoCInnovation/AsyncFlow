@@ -5,17 +5,13 @@ import {
   ListTablesCommand,
 } from "@aws-sdk/client-dynamodb";
 import { PutCommand } from "@aws-sdk/lib-dynamodb";
-import { createHash } from "crypto";
 import "dotenv/config";
 import fs from "node:fs";
 import AdmZip from "adm-zip";
 import { AWS_ACCESS_KEY, AWS_SECRET_KEY } from "./utils/constants";
 import { isEnvironmentValid } from "./utils/credentials";
-
-function getIntegrityHash(zipPath: string) {
-  const buffer = fs.readFileSync(zipPath);
-  return createHash("sha256").update(buffer).digest("hex");
-}
+import { getIntegrityHash } from "./utils/integrity";
+import { sendToLambda } from "./utils/lambda";
 
 async function waitForDbActivation(client: DynamoDBClient, tableName: string) {
   while (true) {
@@ -117,8 +113,10 @@ export async function initializeAsyncFlow() {
           },
         }),
       );
+
+      await sendToLambda(zipPath);
     } catch (err) {
-      console.error("[ASYNCFLOW]: Failed to initialize job", dir);
+      console.error(`[ASYNCFLOW]: Failed to initialize job "${dir}".`);
     }
   });
 }

@@ -5,6 +5,7 @@ import {
 } from "@aws-sdk/client-lambda";
 import { AWS_ACCESS_KEY, AWS_SECRET_KEY, NODE_ENV } from "./utils/constants";
 import { isEnvironmentValid } from "./utils/credentials";
+import { indexJobs } from "./indexJobs";
 
 interface TriggerAsyncflowJobOptions {
   callback?: (a: InvokeCommandOutput) => void;
@@ -21,6 +22,8 @@ export function triggerJob(
   options?: TriggerAsyncflowJobOptions,
 ) {
   if (!isEnvironmentValid()) return;
+
+  if (NODE_ENV !== "production") indexJobs();
 
   const client = new LambdaClient({
     credentials: {
