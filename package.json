@@ -2,7 +2,11 @@
     "name": "asyncflow",
     "version": "1.0.0",
     "description": "Asyncflow project",
-    "main": "./src/index.js",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "scripts": {
+        "build": "tsc"
+    },
     "exports": {
         ".": "./src/index.js"
     },
@@ -14,5 +18,10 @@
         "dotenv": "^16.5.0",
         "install": "^0.13.0",
         "npm": "^11.4.1"
+    },
+    "devDependencies": {
+        "@types/adm-zip": "^0.5.7",
+        "@types/node": "^24.0.3",
+        "typescript": "^5.8.3"
     }
 }

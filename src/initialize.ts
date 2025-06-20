@@ -1,3 +1,10 @@
+/*
+** EPITECH PROJECT, 2025
+** AsyncFlow
+** File description:
+** src/initialize.ts
+*/
+
 import {
   CreateTableCommand,
   DescribeTableCommand,
@@ -11,34 +18,31 @@ import fs from "node:fs";
 import AdmZip from "adm-zip";
 import { AWS_ACCESS_KEY, AWS_SECRET_KEY } from "./utils/constants";
 
-function getIntegrityHash(zipPath) {
+function getIntegrityHash(zipPath: string) {
   const buffer = fs.readFileSync(zipPath);
   return createHash("sha256").update(buffer).digest("hex");
 }
 
-async function waitForDbActivation(client, tableName) {
+async function waitForDbActivation(client: DynamoDBClient, tableName: string) {
   while (true) {
     try {
       const data = await client.send(
         new DescribeTableCommand({ TableName: tableName }),
       );
-      if (data.Table.TableStatus === "ACTIVE") {
-        console.log(`Table ${tableName} is ACTIVE`);
+      if (data.Table && data.Table.TableStatus === "ACTIVE") {
         return;
       }
     } catch (err) {
-      if (err.name !== "ResourceNotFoundException") {
-        throw err;
-      }
+      console.error("[ASYNCFLOW]: Error checking for database.");
     }
     await new Promise((resolve) => setTimeout(resolve, 3000));
   }
 }
 
-async function createAsyncflowTable(client) {
+async function createAsyncflowTable(client: DynamoDBClient) {
   try {
     const data = await client.send(new ListTablesCommand({}));
-    const exists = data.TableNames.includes("Asyncflow");
+    const exists = data.TableNames && data.TableNames.includes("Asyncflow");
     if (exists) {
       return;
     }
@@ -86,13 +90,13 @@ export async function initializeAsyncFlow() {
   }
 
   //checks if there is any jobs, throws error if not
-  const asyncflowDir = fs.readdirSync("asyncflow", "utf8", { flag: "r" });
+  const asyncflowDir = fs.readdirSync("asyncflow", "utf8");
   if (asyncflowDir.length == 0) {
     return;
   }
   //creates temporary dir for zip files
   if (!fs.existsSync("asyncflow/tmp")) {
-    fs.mkdirSync("asyncflow/tmp", { rescursive: true });
+    fs.mkdirSync("asyncflow/tmp", { recursive: true });
   }
 
   const zip = new AdmZip();
