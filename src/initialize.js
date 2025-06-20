@@ -62,6 +62,13 @@ async function createAsyncflowTable(client) {
 }
 
 export async function initializeAsyncFlow() {
+  if (AWS_SECRET_KEY === undefined || AWS_ACCESS_KEY === undefined) {
+    console.error(
+      "[ASYNCFLOW]: No aws secret or access key provided, please check relevent documentation.",
+    );
+    return;
+  }
+
   const client = new DynamoDBClient({
     region: "eu-west-3",
     credentials: {
