@@ -80,8 +80,8 @@ export async function initializeAsyncFlow() {
     return;
   }
   //creates temporary dir for zip files
-  if (!fs.existsSync("asyncflow/tmp")) {
-    fs.mkdirSync("asyncflow/tmp", { recursive: true });
+  if (!fs.existsSync("/tmp/asyncflow")) {
+    fs.mkdirSync("/tmp/asyncflow", { recursive: true });
   }
 
   const zip = new AdmZip();
@@ -89,10 +89,7 @@ export async function initializeAsyncFlow() {
   //iterates through each job
   asyncflowDir.forEach(async (dir) => {
     try {
-      const zipPath = "asyncflow/tmp/" + dir + ".zip";
-      if (dir == "tmp") {
-        return;
-      }
+      const zipPath = "/tmp/asyncflow/" + dir + ".zip";
       const path = "asyncflow/" + dir;
       if (!fs.readdirSync(path)[0]) {
         console.error("Failed to index asyncflow/" + dir, "file not found.");
