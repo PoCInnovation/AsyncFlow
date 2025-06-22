@@ -11,7 +11,7 @@ import AdmZip from "adm-zip";
 import { AWS_ACCESS_KEY, AWS_SECRET_KEY } from "./utils/constants";
 import { isEnvironmentValid } from "./utils/credentials";
 import { getIntegrityHash } from "./utils/integrity";
-import { sendToLambda } from "./utils/lambda";
+import { sendToLambda } from "./sendLambda";
 
 async function waitForDbActivation(client: DynamoDBClient, tableName: string) {
   while (true) {
@@ -111,7 +111,7 @@ export async function initializeAsyncFlow() {
         }),
       );
 
-      await sendToLambda(zipPath);
+      // TODO: await sendToLambda(zipPath);
     } catch (err) {
       console.error(`[ASYNCFLOW]: Failed to initialize job "${dir}".`);
     }

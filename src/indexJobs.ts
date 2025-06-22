@@ -9,7 +9,8 @@ import {
 
 import { getIntegrityHash } from "./utils/integrity";
 import { AWS_ACCESS_KEY, AWS_SECRET_KEY } from "./utils/constants";
-import { sendToLambda } from "./utils/lambda";
+import { sendToLambda } from "./sendLambda";
+import { guessLanguage } from "./utils/language";
 
 // TODO: Check if the Asyncflow table exists on DynamoDB
 // This is actually a challenge because I need this function to be synchronous.
@@ -31,6 +32,15 @@ export function indexJobs() {
 
   asyncflowDir.forEach(async (dir) => {
     try {
+      const language = await guessLanguage(dir);
+
+      if (language === undefined) {
+        console.error(
+          "[ASYNCFLOW]: Couldn't guess your job's language. Check your filesystem for filename errors or use the cli for code generation.",
+        );
+        return;
+      }
+
       const command = new GetCommand({
         TableName: "Asyncflow",
         Key: {
@@ -58,7 +68,7 @@ export function indexJobs() {
           }),
         );
 
-        return await sendToLambda(zipPath);
+        return await sendToLambda(zipPath, dir, language);
       }
 
       const remoteIntegrityHash = data.Item.integrityHash as string;
@@ -74,7 +84,7 @@ export function indexJobs() {
           }),
         );
 
-        return await sendToLambda(zipPath);
+        return await sendToLambda(zipPath, dir, language);
       }
     } catch (err) {
       console.error(`[ASYNCFLOW]: Failed to index job "${dir}".`);
