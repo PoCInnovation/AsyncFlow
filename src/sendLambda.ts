@@ -11,7 +11,11 @@ import {
   UpdateFunctionCodeCommand,
 } from "@aws-sdk/client-lambda";
 import { readFile } from "fs/promises";
-import { ASYNCFLOW_DEFAULT_ROLE } from "./utils/constants";
+import {
+  ASYNCFLOW_DEFAULT_ROLE,
+  AWS_ACCESS_KEY,
+  AWS_SECRET_KEY,
+} from "./utils/constants";
 import { LambdaLanguage } from "./definitions";
 
 const languageConfig: Record<
@@ -83,16 +87,22 @@ export async function sendToLambda(
   lambdaName: string,
   lambdaLanguage: LambdaLanguage,
 ) {
+  // const roleArn = await resolveRoleArn();
+  //
+  // if (roleArn === undefined) {
+  //   console.error("[ASYNCFLOW]: Couldn't resolve IAM role.");
+  //   return;
+  // }
+
   const language = languageConfig[lambdaLanguage];
-  const client = new LambdaClient({});
+  const client = new LambdaClient({
+    region: "us-west-3",
+    credentials: {
+      accessKeyId: AWS_ACCESS_KEY!,
+      secretAccessKey: AWS_SECRET_KEY!,
+    },
+  });
   const zipBuffer = await readFile(zipPath);
-
-  const roleArn = await resolveRoleArn();
-
-  if (roleArn === undefined) {
-    console.error("[ASYNCFLOW]: Couldn't resolve IAM role.");
-    return;
-  }
 
   try {
     client.send(
@@ -107,7 +117,7 @@ export async function sendToLambda(
         new CreateFunctionCommand({
           ...language,
           FunctionName: lambdaName,
-          Role: roleArn,
+          Role: "arn:aws:iam::357768690498:role/asyncflow",
           Description: `Asyncflow job "${lambdaName}"`,
           Code: { ZipFile: zipBuffer },
         }),

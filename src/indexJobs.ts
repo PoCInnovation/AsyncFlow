@@ -32,7 +32,7 @@ export function indexJobs() {
 
   asyncflowDir.forEach(async (dir) => {
     try {
-      const language = await guessLanguage(dir);
+      const language = await guessLanguage("asyncflow/" + dir);
 
       if (language === undefined) {
         console.error(

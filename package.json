@@ -6,7 +6,7 @@
   "type": "module",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "build": "tsc"
+    "build": "tsc && tsc-alias -p tsconfig.json"
   },
   "exports": {
     ".": "./dist/index.js"
@@ -27,6 +27,7 @@
   "devDependencies": {
     "@types/adm-zip": "^0.5.7",
     "@types/node": "^24.0.3",
+    "tsc-alias": "^1.8.16",
     "typescript": "^5.8.3"
   }
 }

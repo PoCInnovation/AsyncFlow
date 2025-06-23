@@ -10,7 +10,7 @@ export async function guessLanguage(
   const entries = await readdir(directory);
   const lower = entries.map((n) => n.toLowerCase());
 
-  if (lower.includes("package.json") || lower.includes("index.js")) {
+  if (lower.includes("package.json") || lower.includes("index.mjs")) {
     return "nodejs";
   }
 

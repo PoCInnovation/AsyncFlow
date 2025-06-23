@@ -5,13 +5,13 @@ import {
   ListTablesCommand,
 } from "@aws-sdk/client-dynamodb";
 import { PutCommand } from "@aws-sdk/lib-dynamodb";
-import "dotenv/config";
 import fs from "node:fs";
 import AdmZip from "adm-zip";
 import { AWS_ACCESS_KEY, AWS_SECRET_KEY } from "./utils/constants";
 import { isEnvironmentValid } from "./utils/credentials";
 import { getIntegrityHash } from "./utils/integrity";
 import { sendToLambda } from "./sendLambda";
+import { guessLanguage } from "./utils/language";
 
 async function waitForDbActivation(client: DynamoDBClient, tableName: string) {
   while (true) {
@@ -89,6 +89,15 @@ export async function initializeAsyncFlow() {
   //iterates through each job
   asyncflowDir.forEach(async (dir) => {
     try {
+      const language = await guessLanguage("asyncflow/" + dir);
+
+      if (language === undefined) {
+        console.error(
+          "[ASYNCFLOW]: Couldn't guess your job's language. Check your filesystem for filename errors or use the cli for code generation.",
+        );
+        return;
+      }
+
       const zipPath = "/tmp/asyncflow/" + dir + ".zip";
       const path = "asyncflow/" + dir;
       if (!fs.readdirSync(path)[0]) {
@@ -111,7 +120,7 @@ export async function initializeAsyncFlow() {
         }),
       );
 
-      // TODO: await sendToLambda(zipPath);
+      await sendToLambda(zipPath, dir, language);
     } catch (err) {
       console.error(`[ASYNCFLOW]: Failed to initialize job "${dir}".`);
     }
