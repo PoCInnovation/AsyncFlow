@@ -16,21 +16,7 @@ import {
   AWS_ACCESS_KEY,
   AWS_SECRET_KEY,
 } from "./utils/constants";
-import { LambdaLanguage } from "./definitions";
 
-const languageConfig: Record<
-  LambdaLanguage,
-  { Runtime: Runtime; Handler: string }
-> = {
-  nodejs: {
-    Runtime: "nodejs22.x",
-    Handler: "index.handler",
-  },
-  python: {
-    Runtime: "python3.13",
-    Handler: "lambda_function.lambda_handler",
-  },
-};
 
 async function resolveRoleArn() {
   const iam = new IAMClient({});
@@ -85,7 +71,10 @@ async function resolveRoleArn() {
 export async function sendToLambda(
   zipPath: string,
   lambdaName: string,
-  lambdaLanguage: LambdaLanguage,
+  language: {
+    Runtime: Runtime;
+    Handler: string;
+},
 ) {
   // const roleArn = await resolveRoleArn();
   //
@@ -94,7 +83,6 @@ export async function sendToLambda(
   //   return;
   // }
 
-  const language = languageConfig[lambdaLanguage];
   const client = new LambdaClient({
     region: "eu-west-3",
     credentials: {
