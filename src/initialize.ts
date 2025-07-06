@@ -12,6 +12,7 @@ import { isEnvironmentValid } from "./utils/credentials";
 import { getIntegrityHash } from "./utils/integrity";
 import { sendToLambda } from "./sendLambda";
 import { guessLanguage } from "./utils/language";
+import { getJob, updateJob } from "./utils/dynamodb";
 
 async function waitForDbActivation(client: DynamoDBClient, tableName: string) {
   while (true) {
@@ -57,6 +58,7 @@ async function createAsyncflowTable(client: DynamoDBClient) {
 
 export async function initializeAsyncFlow() {
   if (!isEnvironmentValid()) return;
+
 
   const client = new DynamoDBClient({
     region: "eu-west-3",
@@ -110,16 +112,11 @@ export async function initializeAsyncFlow() {
 
       //generates integrity hash
       const integrityHash = getIntegrityHash(zipPath);
-      await client.send(
-        new PutCommand({
-          TableName: "Asyncflow",
-          Item: {
-            lambda_name: dir,
-            integrityHash,
-          },
-        }),
-      );
 
+      const job = await getJob(client, dir)
+      if (!job || job.integrityHash != integrityHash){
+        await updateJob(client,dir, integrityHash)
+      }
       await sendToLambda(zipPath, dir, language);
     } catch (err) {
       console.error(`[ASYNCFLOW]: Failed to initialize job "${dir}".`);

@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "Asyncflow project",
   "main": "./dist/index.js",
-  "type": "module",
   "types": "./dist/index.d.ts",
   "scripts": {
     "build": "tsc && tsc-alias -p tsconfig.json"

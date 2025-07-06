@@ -96,7 +96,7 @@ export async function sendToLambda(
 
   const language = languageConfig[lambdaLanguage];
   const client = new LambdaClient({
-    region: "us-west-3",
+    region: "eu-west-3",
     credentials: {
       accessKeyId: AWS_ACCESS_KEY!,
       secretAccessKey: AWS_SECRET_KEY!,
@@ -105,7 +105,7 @@ export async function sendToLambda(
   const zipBuffer = await readFile(zipPath);
 
   try {
-    client.send(
+    await client.send(
       new UpdateFunctionCodeCommand({
         FunctionName: lambdaName,
         ZipFile: zipBuffer,
