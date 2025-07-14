@@ -1,0 +1,32 @@
+{
+  "name": "asyncflow",
+  "version": "1.0.0",
+  "description": "Asyncflow project",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc && tsc-alias -p tsconfig.json"
+  },
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "package.json"
+  ],
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.826.0",
+    "@aws-sdk/client-iam": "^3.830.0",
+    "@aws-sdk/client-lambda": "^3.833.0",
+    "@aws-sdk/lib-dynamodb": "^3.826.0",
+    "adm-zip": "^0.5.16"
+  },
+  "devDependencies": {
+    "@types/adm-zip": "^0.5.7",
+    "@types/node": "^24.0.3",
+    "tsc-alias": "^1.8.16",
+    "typescript": "^5.8.3"
+  }
+}
