@@ -1,46 +1,61 @@
-import {
-  LambdaClient,
-  InvokeCommand,
-  InvokeCommandOutput,
-} from "@aws-sdk/client-lambda";
-import { AWS_ACCESS_KEY, AWS_SECRET_KEY, NODE_ENV } from "./utils/constants";
+import { InvokeCommand, InvokeCommandOutput } from "@aws-sdk/client-lambda";
+import { NODE_ENV } from "./utils/constants";
 import { isEnvironmentValid } from "./utils/credentials";
 import { indexJobs } from "./indexJobs";
+import { lambdaClient } from "./awsClients";
 
-interface TriggerAsyncflowJobOptions {
-  callback?: (a: InvokeCommandOutput) => void;
+interface TriggerAsyncflowJobOptions<T> {
+  callback?: (a: LambdaResponse<T> | null) => void;
   onrejected?: () => void;
   payload?: Record<string, any>;
+}
+
+interface LambdaResponse<T> {
+  statusCode: number;
+  body: T;
 }
 
 function defaultOnrejected(jobName: string) {
   console.error(`[ASYNCFLOW]: Execution failed for "${jobName}" at ${Date()}.`);
 }
 
-export function triggerJob(
+function callback<T>(
+  res: InvokeCommandOutput,
+  options?: TriggerAsyncflowJobOptions<T>,
+) {
+  if (options?.callback === undefined) return;
+
+  if (res.Payload === undefined) {
+    options.callback(null);
+  } else {
+    try {
+      const payload = JSON.parse(
+        Buffer.from(res.Payload).toString("utf8"),
+      ) as LambdaResponse<T>;
+      options.callback(payload);
+    } catch (err) {
+      options.callback(null);
+    }
+  }
+}
+
+export function triggerJob<T>(
   jobName: string,
-  options?: TriggerAsyncflowJobOptions,
+  options?: TriggerAsyncflowJobOptions<T>,
 ) {
   if (!isEnvironmentValid()) return;
 
   if (NODE_ENV !== "production") indexJobs();
 
-  const client = new LambdaClient({
-    credentials: {
-      accessKeyId: AWS_ACCESS_KEY!,
-      secretAccessKey: AWS_SECRET_KEY!,
-    },
-  });
-
   const command = new InvokeCommand({
     FunctionName: jobName,
-    InvocationType: "Event",
+    InvocationType: "RequestResponse",
     Payload: options?.payload ? JSON.stringify(options.payload) : undefined,
   });
 
-  client
+  lambdaClient
     .send(command)
-    .then(options?.callback)
+    .then((res) => callback(res, options))
     .catch(() =>
       options?.onrejected ? options.onrejected() : defaultOnrejected(jobName),
     );

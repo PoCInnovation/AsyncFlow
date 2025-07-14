@@ -1,23 +1,21 @@
 import {
   CreateTableCommand,
   DescribeTableCommand,
-  DynamoDBClient,
   ListTablesCommand,
 } from "@aws-sdk/client-dynamodb";
-import { PutCommand } from "@aws-sdk/lib-dynamodb";
 import fs from "node:fs";
 import AdmZip from "adm-zip";
-import { AWS_ACCESS_KEY, AWS_SECRET_KEY } from "./utils/constants";
 import { isEnvironmentValid } from "./utils/credentials";
 import { getIntegrityHash } from "./utils/integrity";
 import { sendToLambda } from "./sendLambda";
 import { guessLanguage } from "./utils/language";
 import { getJob, updateJob } from "./utils/dynamodb";
+import { dynamoClient } from "./awsClients";
 
-async function waitForDbActivation(client: DynamoDBClient, tableName: string) {
+async function waitForDbActivation(tableName: string) {
   while (true) {
     try {
-      const data = await client.send(
+      const data = await dynamoClient.send(
         new DescribeTableCommand({ TableName: tableName }),
       );
       if (data.Table && data.Table.TableStatus === "ACTIVE") {
@@ -30,14 +28,14 @@ async function waitForDbActivation(client: DynamoDBClient, tableName: string) {
   }
 }
 
-async function createAsyncflowTable(client: DynamoDBClient) {
+async function createAsyncflowTable() {
   try {
-    const data = await client.send(new ListTablesCommand({}));
+    const data = await dynamoClient.send(new ListTablesCommand({}));
     const exists = data.TableNames && data.TableNames.includes("Asyncflow");
     if (exists) {
       return;
     }
-    await client.send(
+    await dynamoClient.send(
       new CreateTableCommand({
         TableName: "Asyncflow",
         KeySchema: [{ AttributeName: "lambda_name", KeyType: "HASH" }],
@@ -50,7 +48,7 @@ async function createAsyncflowTable(client: DynamoDBClient) {
         },
       }),
     );
-    await waitForDbActivation(client, "Asyncflow");
+    await waitForDbActivation("Asyncflow");
   } catch (_) {
     console.error("[ASYNCFLOW]: Unexpected error while creating tables");
   }
@@ -59,16 +57,7 @@ async function createAsyncflowTable(client: DynamoDBClient) {
 export async function initializeAsyncFlow() {
   if (!isEnvironmentValid()) return;
 
-
-  const client = new DynamoDBClient({
-    region: "eu-west-3",
-    credentials: {
-      accessKeyId: AWS_ACCESS_KEY!,
-      secretAccessKey: AWS_SECRET_KEY!,
-    },
-  });
-
-  await createAsyncflowTable(client);
+  await createAsyncflowTable();
 
   //checks if asyncflow dir exists and throws error if not
   if (!fs.existsSync("asyncflow/")) {
@@ -113,9 +102,11 @@ export async function initializeAsyncFlow() {
       //generates integrity hash
       const integrityHash = getIntegrityHash(zipPath);
 
-      const job = await getJob(client, dir)
-      if (!job || job.integrityHash != integrityHash){
-        await updateJob(client,dir, integrityHash)
+      const job = await getJob(dir);
+      console.log(typeof job?.integrityHash, job?.integrityHash);
+      // @ts-ignore:
+      if (!job || job.integrityHash != integrityHash) {
+        await updateJob(dir, integrityHash);
       }
       await sendToLambda(zipPath, dir, language);
     } catch (err) {

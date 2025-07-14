@@ -1,16 +1,11 @@
 import fs from "node:fs";
 import AdmZip from "adm-zip";
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import {
-  DynamoDBDocumentClient,
-  GetCommand,
-  PutCommand,
-} from "@aws-sdk/lib-dynamodb";
+import { GetCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
 
 import { getIntegrityHash } from "./utils/integrity";
-import { AWS_ACCESS_KEY, AWS_SECRET_KEY } from "./utils/constants";
 import { sendToLambda } from "./sendLambda";
 import { guessLanguage } from "./utils/language";
+import { dynamoClient, dynamoDocClient } from "./awsClients";
 
 // TODO: Check if the Asyncflow table exists on DynamoDB
 // This is actually a challenge because I need this function to be synchronous.
@@ -20,15 +15,6 @@ export function indexJobs() {
   const asyncflowDir = fs.readdirSync("asyncflow", "utf8");
   const zip = new AdmZip();
   const timestamp = Date.now();
-
-  const client = new DynamoDBClient({
-    region: "eu-west-3",
-    credentials: {
-      accessKeyId: AWS_ACCESS_KEY!,
-      secretAccessKey: AWS_SECRET_KEY!,
-    },
-  });
-  const docClient = DynamoDBDocumentClient.from(client);
 
   asyncflowDir.forEach(async (dir) => {
     try {
@@ -48,7 +34,7 @@ export function indexJobs() {
         },
         ProjectionExpression: "integrityHash",
       });
-      const data = await docClient.send(command);
+      const data = await dynamoDocClient.send(command);
 
       const zipPath = `/tmp/asyncflow-${timestamp}-${dir}.zip`;
 
@@ -58,7 +44,7 @@ export function indexJobs() {
       const localIntegritHash = getIntegrityHash(zipPath);
 
       if (!data.Item || !data.Item.integrityHash) {
-        await client.send(
+        await dynamoClient.send(
           new PutCommand({
             TableName: "Asyncflow",
             Item: {
@@ -74,7 +60,7 @@ export function indexJobs() {
       const remoteIntegrityHash = data.Item.integrityHash as string;
 
       if (localIntegritHash !== remoteIntegrityHash) {
-        await client.send(
+        await dynamoClient.send(
           new PutCommand({
             TableName: "Asyncflow",
             Item: {
