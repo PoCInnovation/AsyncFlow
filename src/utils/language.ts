@@ -32,7 +32,7 @@ export async function guessLanguage(
   const entries = await readdir(directory);
   const lower = entries.map((n) => n.toLowerCase());
 
-  if (lower.includes("Gemfile")) {
+  if (lower.includes("gemfile")) {
     return languageConfig["ruby"];
   }
   if (lower.includes("package.json") || lower.includes("index.mjs")) {
