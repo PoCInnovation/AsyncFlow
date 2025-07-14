@@ -36,7 +36,7 @@ export async function sendToLambda(
         new CreateFunctionCommand({
           ...language,
           FunctionName: lambdaName,
-          Role: "arn:aws:iam::357768690498:role/asyncflow",
+          Role: roleArn,
           Description: `Asyncflow job "${lambdaName}"`,
           Code: { ZipFile: zipBuffer },
         }),
