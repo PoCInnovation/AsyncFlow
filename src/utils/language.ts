@@ -3,7 +3,7 @@ import { extname } from "path";
 import { Runtime } from "@aws-sdk/client-lambda";
 import { LambdaLanguage } from "../definitions";
 
-const languageConfig: Record<
+export const languageConfig: Record<
   LambdaLanguage,
   { Runtime: Runtime; Handler: string }
 > = {
