@@ -75,10 +75,10 @@ export async function initializeAsyncFlow() {
     fs.mkdirSync("/tmp/asyncflow", { recursive: true });
   }
 
-  const zip = new AdmZip();
 
   //iterates through each job
   asyncflowDir.forEach(async (dir) => {
+    const zip = new AdmZip();
     try {
       const language = await guessLanguage("asyncflow/" + dir);
 
@@ -105,7 +105,7 @@ export async function initializeAsyncFlow() {
       const job = await getJob(dir);
       console.log(typeof job?.integrityHash, job?.integrityHash);
       // @ts-ignore:
-      if (!job || job.integrityHash != integrityHash) {
+      if (!job || job.integrityHash.S != integrityHash) {
         await updateJob(dir, integrityHash);
       }
       await sendToLambda(zipPath, dir, language);
