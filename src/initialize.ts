@@ -11,6 +11,7 @@ import { sendToLambda } from "./sendLambda";
 import { guessLanguage } from "./utils/language";
 import { getJob, updateJob } from "./utils/dynamodb";
 import { dynamoClient } from "./awsClients";
+import { resolve } from "node:path";
 
 async function waitForDbActivation(tableName: string) {
   while (true) {
@@ -77,7 +78,6 @@ export async function initializeAsyncFlow() {
 
   //iterates through each job
   asyncflowDir.forEach(async (dir) => {
-    const zip = new AdmZip();
     try {
       const language = await guessLanguage("asyncflow/" + dir);
 
@@ -88,25 +88,27 @@ export async function initializeAsyncFlow() {
         return;
       }
 
-      const zipPath = "/tmp/asyncflow/" + dir + ".zip";
-      const path = "asyncflow/" + dir;
+      const zipPath = resolve("tmp", "asyncflow", dir + ".zip");
+      const path = resolve("asyncflow", dir);
       if (!fs.readdirSync(path)[0]) {
         console.error("Failed to index asyncflow/" + dir, "file not found.");
         return;
       }
       //creates new zip file at /tmp
-      zip.addLocalFolder(path);
+      const zip = new AdmZip();
+      zip.addLocalFolder(path, "", (filename) => !filename.endsWith(".env"));
       zip.writeZip(zipPath);
 
       //generates integrity hash
-      const integrityHash = getIntegrityHash(zipPath);
+      var integrityHash = getIntegrityHash(zipPath);
+      integrityHash += getIntegrityHash(resolve(path, ".env"));
 
       const job = await getJob(dir);
       // @ts-ignore:
       if (!job || job.integrityHash.S != integrityHash) {
         await updateJob(dir, integrityHash);
+        await sendToLambda(zipPath, dir, language);
       }
-      await sendToLambda(zipPath, dir, language);
     } catch (err) {
       console.error(`[ASYNCFLOW]: Failed to initialize job "${dir}".`);
     }
