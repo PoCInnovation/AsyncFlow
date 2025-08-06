@@ -84,17 +84,20 @@ Please read first this article : [How to Write a Git Commit Message](https://chr
 Then, follow these guidelines:
 
 - **Group Commits:** Each commit should represent a meaningful change. Instead, these commits should be squashed together into a single "Add Feature" commit.
-> For instance, a PR should not look like :
-> 1) Add Feature X
-> 2) Fix Typo
-> 3) Changes to features X
-> 5) Bugfix for feature X
-> 6) Fix Linter 7)
-> 7) ...
+
+  > For instance, a PR should not look like :
+  >
+  > 1. Add Feature X
+  > 2. Fix Typo
+  > 3. Changes to features X
+  > 4. Bugfix for feature X
+  > 5. Fix Linter 7)
+  > 6. ...
 
 - Each commit should **work on its own**: it must compile, pass the linter and so on.
-> This makes life much easier when using `git log`, `git blame`, `git bisect`, etc...\
-> For instance, when doing a `git blame` on a file to figure out why a change was introduced, it's pretty meaningless to see a _Fix linter_ commit message. "Add Feature X" is much more meaningful.
+
+  > This makes life much easier when using `git log`, `git blame`, `git bisect`, etc...\
+  > For instance, when doing a `git blame` on a file to figure out why a change was introduced, it's pretty meaningless to see a _Fix linter_ commit message. "Add Feature X" is much more meaningful.
 
 - Use `git rebase -i main` to group commits together and rewrite their commit message
 

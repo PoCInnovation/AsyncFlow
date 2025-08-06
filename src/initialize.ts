@@ -75,7 +75,6 @@ export async function initializeAsyncFlow() {
     fs.mkdirSync("/tmp/asyncflow", { recursive: true });
   }
 
-
   //iterates through each job
   asyncflowDir.forEach(async (dir) => {
     const zip = new AdmZip();
@@ -103,7 +102,6 @@ export async function initializeAsyncFlow() {
       const integrityHash = getIntegrityHash(zipPath);
 
       const job = await getJob(dir);
-      console.log(typeof job?.integrityHash, job?.integrityHash);
       // @ts-ignore:
       if (!job || job.integrityHash.S != integrityHash) {
         await updateJob(dir, integrityHash);
