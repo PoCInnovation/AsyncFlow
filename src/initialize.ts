@@ -1,62 +1,49 @@
-import {
-  CreateTableCommand,
-  DescribeTableCommand,
-  ListTablesCommand,
-} from "@aws-sdk/client-dynamodb";
 import fs from "node:fs";
 import AdmZip from "adm-zip";
 import { isEnvironmentValid } from "./utils/credentials";
 import { getIntegrityHash } from "./utils/integrity";
 import { sendToLambda } from "./sendLambda";
 import { guessLanguage } from "./utils/language";
-import { getJob, updateJob } from "./utils/dynamodb";
-import { dynamoClient } from "./awsClients";
+import {
+  getJob,
+  updateJob,
+  getAllJobs,
+  createAsyncflowTable,
+  deleteJob,
+} from "./utils/dynamodb";
 import { resolve } from "node:path";
+import { deleteLambda } from "./utils/lambda";
 
-async function waitForDbActivation(tableName: string) {
-  while (true) {
-    try {
-      const data = await dynamoClient.send(
-        new DescribeTableCommand({ TableName: tableName }),
-      );
-      if (data.Table && data.Table.TableStatus === "ACTIVE") {
-        return;
-      }
-    } catch (err) {
-      console.error("[ASYNCFLOW]: Error checking for database.");
-    }
-    await new Promise((resolve) => setTimeout(resolve, 3000));
-  }
-}
+async function checkDeletedJobs() {
+  const jobs = await getAllJobs();
+  let jobsToDelete: string[] = [];
 
-async function createAsyncflowTable() {
-  try {
-    const data = await dynamoClient.send(new ListTablesCommand({}));
-    const exists = data.TableNames && data.TableNames.includes("Asyncflow");
-    if (exists) {
-      return;
+  for (const job of jobs) {
+    const lambda_name = job["lambda_name"].S;
+    const path = resolve("asyncflow", lambda_name);
+    if (!fs.existsSync(path)) {
+      jobsToDelete = jobsToDelete.concat(lambda_name);
     }
-    await dynamoClient.send(
-      new CreateTableCommand({
-        TableName: "Asyncflow",
-        KeySchema: [{ AttributeName: "lambda_name", KeyType: "HASH" }],
-        AttributeDefinitions: [
-          { AttributeName: "lambda_name", AttributeType: "S" },
-        ],
-        ProvisionedThroughput: {
-          ReadCapacityUnits: 5,
-          WriteCapacityUnits: 5,
-        },
-      }),
-    );
-    await waitForDbActivation("Asyncflow");
-  } catch (_) {
-    console.error("[ASYNCFLOW]: Unexpected error while creating tables");
   }
+  return jobsToDelete;
 }
 
 export async function initializeAsyncFlow() {
   if (!isEnvironmentValid()) return;
+
+  //updates deleted jobs
+  const jobsToDelete = await checkDeletedJobs();
+
+  for (const job of jobsToDelete) {
+    try {
+      await deleteJob(job);
+      await deleteLambda(job);
+    } catch (err) {
+      if (err instanceof Error && err.name != "ResourceNotFoundException") {
+        throw err;
+      }
+    }
+  }
 
   await createAsyncflowTable();
 
