@@ -6,6 +6,7 @@ import { languageConfig } from "./utils/language";
 import { sendToLambda } from "./sendLambda";
 import { lambdaClient } from "./awsClients";
 import { GetFunctionCommand, InvokeCommand } from "@aws-sdk/client-lambda";
+import { getUsedEnvVariables } from "./utils/environment";
 
 type JSONPrimitive = string | number | boolean | null;
 
@@ -84,6 +85,8 @@ export function asyncflow<F extends (...args: any[]) => any>(
 ): (...args: Parameters<F>) => Promise<ReturnType<F>> {
   const contents = fun.toString();
   const hash = createHash("sha256").update(contents, "utf8").digest("hex");
+
+  console.log(getUsedEnvVariables(contents));
 
   createLambda(hash, contents);
 
