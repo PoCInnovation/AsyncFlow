@@ -10,7 +10,7 @@ import { getIntegrityHash } from "./utils/integrity";
 import { sendToLambda } from "./sendLambda";
 import { guessLanguage } from "./utils/language";
 import { getJob, updateJob } from "./utils/dynamodb";
-import { dynamoClient } from "./awsClients";
+import { dynamoClient, iamClient } from "./awsClients";
 
 async function waitForDbActivation(tableName: string) {
   while (true) {
@@ -108,7 +108,7 @@ export async function initializeAsyncFlow() {
       if (!job || job.integrityHash != integrityHash) {
         await updateJob(dir, integrityHash);
       }
-      await sendToLambda(zipPath, dir, language);
+      await sendToLambda(zipPath, dir, [], language, undefined);
     } catch (err) {
       console.error(`[ASYNCFLOW]: Failed to initialize job "${dir}".`);
     }

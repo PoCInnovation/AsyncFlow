@@ -54,7 +54,7 @@ export function indexJobs() {
           }),
         );
 
-        return await sendToLambda(zipPath, dir, language);
+        return await sendToLambda(zipPath, dir, [], language, undefined);
       }
 
       const remoteIntegrityHash = data.Item.integrityHash as string;
@@ -70,7 +70,7 @@ export function indexJobs() {
           }),
         );
 
-        return await sendToLambda(zipPath, dir, language);
+        return await sendToLambda(zipPath, dir, [], language, undefined);
       }
     } catch (err) {
       console.error(`[ASYNCFLOW]: Failed to index job "${dir}".`);

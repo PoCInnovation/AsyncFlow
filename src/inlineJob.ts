@@ -1,12 +1,10 @@
-import AdmZip from "adm-zip";
 import { createHash } from "crypto";
-import { writeFileSync, mkdirSync } from "fs";
-import { dirname } from "path";
-import { languageConfig } from "./utils/language";
-import { sendToLambda } from "./sendLambda";
+import { createLambda } from "./utils/lambda";
 import { lambdaClient } from "./awsClients";
 import { GetFunctionCommand, InvokeCommand } from "@aws-sdk/client-lambda";
+import { getCodeDependencies } from "./utils/codeParser";
 import { getUsedEnvVariables } from "./utils/environment";
+import { getCodePolicies, createLambdaRole } from "./utils/roles";
 
 type JSONPrimitive = string | number | boolean | null;
 
@@ -26,38 +24,6 @@ type SerializableFunction<F> = F &
         : "❌ Function return type isn't serializable."
       : "❌ Function arguments are not serializable."
     : never);
-
-function createLambda(hash: string, contents: string) {
-  const filePath = `/tmp/${hash}/index.mjs`;
-
-  mkdirSync(dirname(filePath), { recursive: true });
-  writeFileSync(
-    filePath,
-    `
-export const handler = async (event) => {
-  try {
-    return {
-      statusCode: 200,
-      body: await (${contents})(...event),
-    };
-  } catch (e) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify(e instanceof Error ? e.message : String(e)),
-    };
-  }
-};
-  `,
-  );
-
-  const zip = new AdmZip();
-  const zipPath = `/tmp/${hash}.zip`;
-
-  zip.addLocalFolder(`/tmp/${hash}`);
-  zip.writeZip(zipPath);
-
-  sendToLambda(zipPath, hash, languageConfig.nodejs);
-}
 
 export async function resourceAvailable(
   hash: string,
@@ -80,15 +46,18 @@ export async function resourceAvailable(
   throw new Error(`Lambda "${hash}" never became ready`);
 }
 
-export function asyncflow<F extends (...args: any[]) => any>(
+export async function asyncflow<F extends (...args: any[]) => any>(
   fun: SerializableFunction<F>,
-): (...args: Parameters<F>) => Promise<ReturnType<F>> {
+): Promise<(...args: Parameters<F>) => Promise<ReturnType<F>>> {
   const contents = fun.toString();
   const hash = createHash("sha256").update(contents, "utf8").digest("hex");
 
-  console.log(getUsedEnvVariables(contents));
+  const codeDependencies = await getCodeDependencies(contents);
+  const usedEnvVariables = getUsedEnvVariables(codeDependencies);
+  const codePolicies = getCodePolicies(codeDependencies);
+  const lambdaRole = await createLambdaRole(hash, codePolicies);
 
-  createLambda(hash, contents);
+  createLambda(hash, contents, usedEnvVariables, lambdaRole.Role?.Arn);
 
   return async (...args) => {
     await resourceAvailable(hash);

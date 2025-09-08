@@ -1,49 +1,39 @@
 // @ts-ignore
 import strip from "strip-comments";
 // @ts-ignore
-import detective from "detective";
 
+import { isStringInCode, getCodeDependencies } from "./codeParser";
 import { readFileSync } from "fs";
-import { error } from "console";
-import { Readline } from "node:readline/promises";
 
 function isRelativeImport(path: string): boolean {
   return path.startsWith(".") || path.startsWith("/");
 }
 
-function isStringInCode(contents: string, varKey: string): boolean {
-  const contentsWithoutComments = strip(contents);
-  if (contentsWithoutComments.indexOf(varKey) != -1) {
-    return true;
-  }
-  return false;
-}
-
-export function searchForStringInCode(
-  contents: string,
-  varKey: string,
-): boolean {
-  if (isStringInCode(contents, varKey)) {
-    return true;
-  }
-  const files = detective(contents);
-  for (const file of files) {
-    if (!isRelativeImport(file)) {
-      continue;
-    }
-    const fileContent = readFileSync(file, "utf-8");
-    if (searchForStringInCode(fileContent, varKey)) {
-      return true;
-    }
-  }
-  return false;
-}
+const lambdaReservedEnvVars = [
+  "_HANDLER",
+  "_X_AMZN_TRACE_ID",
+  "AWS_DEFAULT_REGION",
+  "AWS_REGION",
+  "AWS_EXECUTION_ENV",
+  "AWS_LAMBDA_FUNCTION_NAME",
+  "AWS_LAMBDA_FUNCTION_MEMORY_SIZE",
+  "AWS_LAMBDA_FUNCTION_VERSION",
+  "AWS_LAMBDA_INITIALIZATION_TYPE",
+  "AWS_LAMBDA_LOG_GROUP_NAME",
+  "AWS_LAMBDA_LOG_STREAM_NAME",
+  "AWS_ACCESS_KEY",
+  "AWS_ACCESS_KEY_ID",
+  "AWS_SECRET_ACCESS_KEY",
+  "AWS_SESSION_TOKEN",
+  "AWS_LAMBDA_RUNTIME_API",
+  "LAMBDA_TASK_ROOT",
+  "LAMBDA_RUNTIME_DIR",
+];
 
 export function getUsedEnvVariables(
-  contents: string,
+  codeDependencies: string[],
 ): Array<{ key: string; value: string }> {
   const envVars: Array<{ key: string; value: string }> = [];
-
   var envFile: string = "";
   try {
     envFile = readFileSync(".env", "utf-8");
@@ -57,15 +47,21 @@ export function getUsedEnvVariables(
   const parsedEnvFile = envFile.split("\n");
   for (const envVar of parsedEnvFile) {
     const parsedEnvVar = envVar.split("=");
-    if (parsedEnvVar.length != 2) {
+    if (
+      parsedEnvVar.length != 2 ||
+      lambdaReservedEnvVars.includes(parsedEnvVar[0])
+    ) {
       continue;
     }
-    if (searchForStringInCode(contents, parsedEnvVar[0])) {
-      console.log("found");
-      envVars.push({
-        key: parsedEnvVar[0],
-        value: parsedEnvVar[1],
-      });
+    for (const file of codeDependencies) {
+      const fileCode = readFileSync(file).toString();
+      if (isStringInCode(fileCode, parsedEnvVar[0])) {
+        envVars.push({
+          key: parsedEnvVar[0],
+          value: parsedEnvVar[1],
+        });
+        break;
+      }
     }
   }
   return envVars;

@@ -5,6 +5,7 @@ import {
   waitUntilRoleExists,
 } from "@aws-sdk/client-iam";
 import { iamClient } from "./awsClients";
+import { awsServicePermissions } from "./utils/awsServicePermissions";
 
 const ASYNCFLOW_DEFAULT_ROLE = "AsyncflowLambdaExecutionRole";
 
