@@ -1,10 +1,11 @@
 // @ts-ignore
 import strip from "strip-comments";
 // @ts-ignore
+import { getNodeModules } from "./codeParser";
 
-import { writeFileSync, rmSync } from "fs";
+import { writeFileSync, readFileSync, rmSync } from "fs";
 import esbuild from "esbuild";
-import { resolve } from "path";
+import { resolve, join } from "path";
 
 export function isStringInCode(contents: string, varKey: string): boolean {
   const contentsWithoutComments = strip(contents);
@@ -12,6 +13,54 @@ export function isStringInCode(contents: string, varKey: string): boolean {
     return true;
   }
   return false;
+}
+
+export function getProjectModuleType(
+  projectRoot: string,
+): "ES Module" | "CommonJS" {
+  try {
+    const pkgPath = join(projectRoot, "package.json");
+    const pkgContent = readFileSync(pkgPath, "utf8");
+    const pkg = JSON.parse(pkgContent);
+    if (pkg.type === "module") {
+      return "ES Module";
+    } else {
+      return "CommonJS";
+    }
+  } catch (e) {
+    return "CommonJS";
+  }
+}
+
+export function getRelativeImports(dependencies: string[]): Set<string> {
+  const relativeImports: Set<string> = new Set();
+
+  dependencies.forEach((dependency) => {
+    if (dependency.startsWith("node_modules")) {
+      return;
+    } else {
+      relativeImports.add(dependency);
+    }
+  });
+  return relativeImports;
+}
+
+export function getNodeModules(dependencies: string[]): Set<string> {
+  const moduleNames: Set<string> = new Set();
+
+  dependencies.forEach((dep) => {
+    if (!dep.startsWith("node_modules")) {
+      return;
+    }
+    const parts = dep.split("node_modules/")[1]; // remove everything before "node_modules/"
+    if (parts) {
+      const moduleName = parts.startsWith("@")
+        ? parts.split("/").slice(0, 2).join("/") // handle scoped packages like @babel/core
+        : parts.split("/")[0];
+      moduleNames.add(moduleName);
+    }
+  });
+  return moduleNames;
 }
 
 export async function getCodeDependencies(code: string) {

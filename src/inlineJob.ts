@@ -2,9 +2,11 @@ import { createHash } from "crypto";
 import { createLambda } from "./utils/lambda";
 import { lambdaClient } from "./awsClients";
 import { GetFunctionCommand, InvokeCommand } from "@aws-sdk/client-lambda";
-import { getCodeDependencies } from "./utils/codeParser";
+import { getCodeDependencies, getRelativeImports } from "./utils/codeParser";
 import { getUsedEnvVariables } from "./utils/environment";
 import { getCodePolicies, createLambdaRole } from "./utils/roles";
+import { getNodeModules } from "./utils/codeParser";
+import { relative } from "path";
 
 type JSONPrimitive = string | number | boolean | null;
 
@@ -57,7 +59,17 @@ export async function asyncflow<F extends (...args: any[]) => any>(
   const codePolicies = getCodePolicies(codeDependencies);
   const lambdaRole = await createLambdaRole(hash, codePolicies);
 
-  createLambda(hash, contents, usedEnvVariables, lambdaRole.Role?.Arn);
+  const nodeModules = getNodeModules(codeDependencies);
+  const relativeImports = getRelativeImports(codeDependencies);
+
+  createLambda(
+    hash,
+    contents,
+    usedEnvVariables,
+    lambdaRole.Role?.Arn,
+    nodeModules,
+    relativeImports,
+  );
 
   return async (...args) => {
     await resourceAvailable(hash);

@@ -1,43 +1,47 @@
-import { writeFileSync, mkdirSync } from "fs";
+import { writeFileSync, mkdirSync, cpSync } from "fs";
 import { dirname, resolve } from "path";
 import { languageConfig } from "../utils/language";
 import { sendToLambda } from "../sendLambda";
 import { tmpdir } from "os";
 import AdmZip from "adm-zip";
-import { CreateRoleCommandOutput } from "@aws-sdk/client-iam";
+import { cwd } from "process";
+import { getProjectModuleType } from "./codeParser";
+import { getLambdaHandlerCode } from "./lambdaTemplate";
 
 export function createLambda(
   hash: string,
   contents: string,
   envVariablesArray: Array<{ key: string; value: string }>,
   iamRoleArn: string | undefined,
+  nodeModules: Set<string>,
+  relativeImports: Set<string>,
 ) {
-  const filePath = resolve(tmpdir(), hash, "index.mjs");
+  const dirPath = resolve(tmpdir(), hash);
+  const nodeModulesPath = resolve(dirPath, "node_modules");
 
-  mkdirSync(dirname(filePath), { recursive: true });
-  writeFileSync(
-    filePath,
-    `
-  export const handler = async (event) => {
-    try {
-      return {
-        statusCode: 200,
-        body: await (${contents})(...event),
-      };
-    } catch (e) {
-      return {
-        statusCode: 500,
-        body: JSON.stringify(e instanceof Error ? e.message : String(e)),
-      };
-    }
-  };
-    `,
+  mkdirSync(dirPath, { recursive: true });
+  mkdirSync(nodeModulesPath, { recursive: true });
+
+  nodeModules.forEach((module) => {
+    const src = resolve(cwd(), "node_modules", module);
+    const dest = resolve(nodeModulesPath, module);
+    cpSync(src, dest, { recursive: true });
+  });
+  relativeImports.forEach((relativeImport) => {
+    const src = resolve(cwd(), relativeImport);
+    const dest = resolve(dirPath, relativeImport);
+    cpSync(src, dest, { recursive: true });
+  });
+  var { filename, code } = getLambdaHandlerCode(
+    getProjectModuleType(cwd()),
+    contents,
   );
 
-  const zip = new AdmZip();
-  const zipPath = `/tmp/${hash}.zip`;
+  writeFileSync(resolve(dirPath, filename), code);
 
-  zip.addLocalFolder(`/tmp/${hash}`);
+  const zip = new AdmZip();
+  const zipPath = resolve(tmpdir(), `${hash}.zip`);
+  zip.addLocalFolder(dirPath);
   zip.writeZip(zipPath);
 
   sendToLambda(
