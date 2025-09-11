@@ -7,15 +7,64 @@ import AdmZip from "adm-zip";
 import { cwd } from "process";
 import { getProjectModuleType } from "./codeParser";
 import { getLambdaHandlerCode } from "./lambdaTemplate";
+import {
+  DeleteFunctionCommand,
+  ListFunctionsCommand,
+} from "@aws-sdk/client-lambda";
+import {
+  DeleteRoleCommand,
+  ListAttachedRolePoliciesCommand,
+  DetachRolePolicyCommand,
+} from "@aws-sdk/client-iam";
+import { lambdaClient, iamClient } from "../awsClients";
+
+async function deleteRoleCompletely(roleName: string | undefined) {
+  // 1. Lister les policies managées attachées
+  const attachedPolicies = await iamClient.send(
+    new ListAttachedRolePoliciesCommand({ RoleName: roleName }),
+  );
+
+  // 2. Détacher chaque policy
+  const detachPromises = (attachedPolicies.AttachedPolicies ?? []).map(
+    (policy) =>
+      iamClient.send(
+        new DetachRolePolicyCommand({
+          RoleName: roleName,
+          PolicyArn: policy.PolicyArn,
+        }),
+      ),
+  );
+  await Promise.all(detachPromises);
+
+  // 3. Supprimer le rôle
+  await iamClient.send(new DeleteRoleCommand({ RoleName: roleName }));
+}
+
+export async function deleteBulkLambdas() {
+  const lambdaList = await lambdaClient.send(new ListFunctionsCommand({}));
+  const promises = (lambdaList.Functions ?? [])
+    .filter((lambda) => lambda.FunctionName?.startsWith("ASYNCFLOW-CAL-"))
+    .map(async (lambda) => {
+      await deleteRoleCompletely(lambda.FunctionName);
+      return await iamClient.send(
+        new DeleteRoleCommand({ RoleName: lambda.FunctionName }),
+      );
+    });
+
+  await Promise.all(promises);
+}
 
 export function createLambda(
   hash: string,
   contents: string,
   envVariablesArray: Array<{ key: string; value: string }>,
   iamRoleArn: string | undefined,
-  nodeModules: Set<string>,
-  relativeImports: Set<string>,
+  codeImports: {
+    nodeModules: Set<string>;
+    relativeImports: Set<string>;
+  },
 ) {
+  const { nodeModules, relativeImports } = codeImports;
   const dirPath = resolve(tmpdir(), hash);
   const nodeModulesPath = resolve(dirPath, "node_modules");
 
@@ -32,7 +81,7 @@ export function createLambda(
     const dest = resolve(dirPath, relativeImport);
     cpSync(src, dest, { recursive: true });
   });
-  var { filename, code } = getLambdaHandlerCode(
+  const { filename, code } = getLambdaHandlerCode(
     getProjectModuleType(cwd()),
     contents,
   );

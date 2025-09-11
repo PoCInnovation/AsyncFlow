@@ -32,17 +32,28 @@ export function getProjectModuleType(
   }
 }
 
-export function getRelativeImports(dependencies: string[]): Set<string> {
+export function getImports(dependencies: string[]): {
+  nodeModules: Set<string>;
+  relativeImports: Set<string>;
+} {
+  const nodeModules: Set<string> = new Set();
   const relativeImports: Set<string> = new Set();
 
-  dependencies.forEach((dependency) => {
-    if (dependency.startsWith("node_modules")) {
-      return;
+  dependencies.forEach((dep) => {
+    if (!dep.startsWith("node_modules")) {
+      relativeImports.add(dep);
     } else {
-      relativeImports.add(dependency);
+      const parts = dep.split("node_modules/")[1]; // remove everything before "node_modules/"
+      if (parts) {
+        const moduleName = parts.startsWith("@")
+          ? parts.split("/").slice(0, 2).join("/") // handle scoped packages like @babel/core
+          : parts.split("/")[0];
+        nodeModules.add(moduleName);
+      }
     }
   });
-  return relativeImports;
+
+  return { nodeModules, relativeImports };
 }
 
 export function getNodeModules(dependencies: string[]): Set<string> {

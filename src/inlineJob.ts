@@ -1,12 +1,10 @@
 import { createHash } from "crypto";
-import { createLambda } from "./utils/lambda";
+import { createLambda, deleteBulkLambdas } from "./utils/lambda";
 import { lambdaClient } from "./awsClients";
 import { GetFunctionCommand, InvokeCommand } from "@aws-sdk/client-lambda";
-import { getCodeDependencies, getRelativeImports } from "./utils/codeParser";
+import { getCodeDependencies, getImports } from "./utils/codeParser";
 import { getUsedEnvVariables } from "./utils/environment";
 import { getCodePolicies, createLambdaRole } from "./utils/roles";
-import { getNodeModules } from "./utils/codeParser";
-import { relative } from "path";
 
 type JSONPrimitive = string | number | boolean | null;
 
@@ -48,52 +46,63 @@ export async function resourceAvailable(
   throw new Error(`Lambda "${hash}" never became ready`);
 }
 
-export async function asyncflow<F extends (...args: any[]) => any>(
-  fun: SerializableFunction<F>,
-): Promise<(...args: Parameters<F>) => Promise<ReturnType<F>>> {
-  const contents = fun.toString();
-  const hash = createHash("sha256").update(contents, "utf8").digest("hex");
+export class Asyncflow {
+  private constructor() {}
 
-  const codeDependencies = await getCodeDependencies(contents);
-  const usedEnvVariables = getUsedEnvVariables(codeDependencies);
-  const codePolicies = getCodePolicies(codeDependencies);
-  const lambdaRole = await createLambdaRole(hash, codePolicies);
+  static async init() {
+    const asyncflowInstance = new Asyncflow();
+    await deleteBulkLambdas();
+    return asyncflowInstance;
+  }
 
-  const nodeModules = getNodeModules(codeDependencies);
-  const relativeImports = getRelativeImports(codeDependencies);
+  async addJob<F extends (...args: any[]) => any>(
+    fun: SerializableFunction<F>,
+  ): Promise<(...args: Parameters<F>) => Promise<ReturnType<F>>> {
+    const contents = fun.toString();
+    const hash = (
+      "ASYNCFLOW-CAL-" +
+      createHash("sha256").update(contents, "utf8").digest("hex")
+    ).slice(0, 64);
 
-  createLambda(
-    hash,
-    contents,
-    usedEnvVariables,
-    lambdaRole.Role?.Arn,
-    nodeModules,
-    relativeImports,
-  );
+    const codeDependencies = await getCodeDependencies(contents);
+    const usedEnvVariables = getUsedEnvVariables(codeDependencies);
+    const codePolicies = getCodePolicies(codeDependencies);
+    const lambdaRole = await createLambdaRole(hash, codePolicies);
 
-  return async (...args) => {
-    await resourceAvailable(hash);
+    const codeImports = getImports(codeDependencies);
 
-    const request = await lambdaClient.send(
-      new InvokeCommand({
-        FunctionName: hash,
-        Payload: JSON.stringify(args),
-      }),
+    createLambda(
+      hash,
+      contents,
+      usedEnvVariables,
+      lambdaRole.Role?.Arn,
+      codeImports,
     );
 
-    if (!request?.Payload) throw new Error("[ASYNCFLOW]: Internal failure.");
+    return async (...args) => {
+      await resourceAvailable(hash);
 
-    const response = JSON.parse(
-      Buffer.from(request.Payload).toString("utf8"),
-    ) as {
-      statusCode: number;
-      body: ReturnType<F>;
+      const request = await lambdaClient.send(
+        new InvokeCommand({
+          FunctionName: hash,
+          Payload: JSON.stringify(args),
+        }),
+      );
+
+      if (!request?.Payload) throw new Error("[ASYNCFLOW]: Internal failure.");
+
+      const response = JSON.parse(
+        Buffer.from(request.Payload).toString("utf8"),
+      ) as {
+        statusCode: number;
+        body: ReturnType<F>;
+      };
+
+      if (response.statusCode == 200) {
+        return response.body;
+      } else {
+        throw new Error("[ASYNCFLOW]: Job failed");
+      }
     };
-
-    if (response.statusCode == 200) {
-      return response.body;
-    } else {
-      throw new Error("[ASYNCFLOW]: Job failed");
-    }
-  };
+  }
 }

@@ -6,7 +6,6 @@ import {
   waitUntilFunctionUpdatedV2,
 } from "@aws-sdk/client-lambda";
 import { readFile } from "fs/promises";
-import { resolveRoleArn } from "./asyncflowRole";
 import { lambdaClient } from "./awsClients";
 
 export async function sendToLambda(
@@ -29,24 +28,14 @@ export async function sendToLambda(
   // lambdas no longer have the full access overall role, only the full access to a targeted service
 
   // const roleArn = await resolveRoleArn();
+  // if (roleArn === undefined) {
+  //   console.error("[ASYNCFLOW]: Couldn't resolve IAM role.");
+  //   return;
+  // }
 
-  if (roleArn === undefined) {
-    console.error("[ASYNCFLOW]: Couldn't resolve IAM role.");
-    return;
-  }
   const zipBuffer = await readFile(zipPath);
 
   try {
-    const codeUpdate = await lambdaClient.send(
-      new UpdateFunctionCodeCommand({
-        FunctionName: lambdaName,
-        ZipFile: zipBuffer,
-      }),
-    );
-    await waitUntilFunctionUpdatedV2(
-      { client: lambdaClient, maxWaitTime: 120 },
-      { FunctionName: lambdaName },
-    );
     await lambdaClient.send(
       new UpdateFunctionConfigurationCommand({
         FunctionName: lambdaName,
