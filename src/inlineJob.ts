@@ -46,6 +46,10 @@ export async function resourceAvailable(
   throw new Error(`Lambda "${hash}" never became ready`);
 }
 
+async function sleep(ms: number){
+  return new Promise((resolve) => setTimeout(resolve, 3000));
+}
+
 export class Asyncflow {
   private constructor() {}
 
@@ -68,8 +72,7 @@ export class Asyncflow {
     const usedEnvVariables = getUsedEnvVariables(codeDependencies);
     const codePolicies = getCodePolicies(codeDependencies);
     const lambdaRole = await createLambdaRole(hash, codePolicies);
-
-    return new Promise((resolve) => setTimeout(resolve, 3000));
+    await sleep(3000)
 
     const codeImports = getImports(codeDependencies);
 
