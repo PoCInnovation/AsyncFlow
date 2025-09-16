@@ -18,11 +18,14 @@
   ],
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.826.0",
-    "@aws-sdk/client-iam": "^3.830.0",
+    "@aws-sdk/client-iam": "^3.882.0",
     "@aws-sdk/client-lambda": "^3.833.0",
     "@aws-sdk/lib-dynamodb": "^3.826.0",
     "adm-zip": "^0.5.16",
-    "dotenv": "^17.2.2"
+    "dotenv": "^17.2.2",
+    "detective": "^5.2.1",
+    "esbuild": "^0.25.9",
+    "strip-comments": "^2.0.1"
   },
   "devDependencies": {
     "@types/adm-zip": "^0.5.7",

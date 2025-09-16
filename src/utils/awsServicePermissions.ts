@@ -1,0 +1,15 @@
+export const awsServicePermissions = {
+  S3: "arn:aws:iam::aws:policy/AmazonS3FullAccess",
+  DynamoDB: "arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess",
+  Lambda: "arn:aws:iam::aws:policy/AWSLambda_FullAccess",
+  SQS: "arn:aws:iam::aws:policy/AmazonSQSFullAccess",
+  SNS: "arn:aws:iam::aws:policy/AmazonSNSFullAccess",
+  CloudWatchLogs: "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess",
+  CloudWatch: "arn:aws:iam::aws:policy/CloudWatchFullAccess",
+  EventBridge: "arn:aws:iam::aws:policy/AmazonEventBridgeFullAccess",
+  StepFunctions: "arn:aws:iam::aws:policy/AWSStepFunctionsFullAccess",
+  SecretsManager: "arn:aws:iam::aws:policy/SecretsManagerReadWrite",
+  SSM: "arn:aws:iam::aws:policy/AmazonSSMFullAccess",
+  STS: "arn:aws:iam::aws:policy/AWSSecurityTokenServiceFullAccess",
+  IAM: "arn:aws:iam::aws:policy/IAMFullAccess",
+};

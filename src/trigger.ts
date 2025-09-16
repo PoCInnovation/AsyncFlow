@@ -3,6 +3,8 @@ import { NODE_ENV } from "./utils/constants";
 import { isEnvironmentValid } from "./utils/credentials";
 import { indexJobs } from "./indexJobs";
 import { lambdaClient } from "./awsClients";
+import { initialize } from "esbuild";
+import { initializeAsyncFlow } from "./initialize";
 
 interface TriggerAsyncflowJobOptions<T> {
   callback?: (a: LambdaResponse<T> | null) => void;
@@ -45,7 +47,7 @@ export function triggerJob<T>(
 ) {
   if (!isEnvironmentValid()) return;
 
-  if (NODE_ENV !== "production") indexJobs();
+  if (NODE_ENV !== "production") initializeAsyncFlow();
 
   const command = new InvokeCommand({
     FunctionName: jobName,

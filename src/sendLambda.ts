@@ -3,12 +3,12 @@ import {
   Runtime,
   UpdateFunctionCodeCommand,
   UpdateFunctionConfigurationCommand,
+  waitUntilFunctionUpdatedV2,
   GetFunctionConfigurationCommand,
 } from "@aws-sdk/client-lambda";
 import { readFile } from "fs/promises";
-import { resolveRoleArn } from "./asyncflowRole";
 import { lambdaClient } from "./awsClients";
-import { configDotenv } from "dotenv";
+import { sleep } from "./utils/lambda";
 
 async function waitForLambdaUpdate(lambdaName: string) {
   const timeoutMs = 15000;
@@ -44,26 +44,28 @@ async function waitForLambdaUpdate(lambdaName: string) {
 export async function sendToLambda(
   zipPath: string,
   lambdaName: string,
+  envVariablesArray: Array<{ key: string; value: string }>,
   language: {
     Runtime: Runtime;
     Handler: string;
   },
+  roleArn: string | undefined,
 ) {
-  let lambdaEnv;
-  try {
-    lambdaEnv = configDotenv({
-      path: "asyncflow/" + lambdaName + "/.env",
-    }).parsed;
-  } catch (err) {
-    lambdaEnv = {};
+  const envVariables: any = {};
+
+  for (const envVar of envVariablesArray) {
+    envVariables[envVar.key] = envVar.value;
   }
 
-  const roleArn = await resolveRoleArn();
+  //Now trying to follow the least priviledge practice,
+  // lambdas no longer have the full access overall role, only the full access to a targeted service
 
-  if (roleArn === undefined) {
-    console.error("[ASYNCFLOW]: Couldn't resolve IAM role.");
-    return;
-  }
+  // const roleArn = await resolveRoleArn();
+  // if (roleArn === undefined) {
+  //   console.error("[ASYNCFLOW]: Couldn't resolve IAM role.");
+  //   return;
+  // }
+
   const zipBuffer = await readFile(zipPath);
 
   try {
@@ -78,24 +80,39 @@ export async function sendToLambda(
       new UpdateFunctionConfigurationCommand({
         FunctionName: lambdaName,
         Environment: {
-          Variables: lambdaEnv,
+          Variables: envVariables,
         },
       }),
     );
-  } catch (err: any) {
-    if (err.name === "ResourceNotFoundException") {
-      await lambdaClient.send(
-        new CreateFunctionCommand({
-          ...language,
-          FunctionName: lambdaName,
-          Role: roleArn,
-          Description: `Asyncflow job "${lambdaName}"`,
-          Code: { ZipFile: zipBuffer },
-          Environment: {
-            Variables: lambdaEnv,
-          },
-        }),
-      );
+  } catch (err) {
+    if (err instanceof Error && err.name === "ResourceNotFoundException") {
+      for (let i = 0; i < 5; i++) {
+        try {
+          await lambdaClient.send(
+            new CreateFunctionCommand({
+              ...language,
+              FunctionName: lambdaName,
+              Role: roleArn,
+              Description: `Asyncflow job "${lambdaName}"`,
+              Code: { ZipFile: zipBuffer },
+              Environment: {
+                Variables: envVariables,
+              },
+            }),
+          );
+          return;
+        } catch (err) {
+          if (
+            err instanceof Error &&
+            err.name === "InvalidParameterValueException" &&
+            err.message.includes("cannot be assumed by Lambda")
+          ) {
+            await sleep(3000);
+          } else {
+            throw err;
+          }
+        }
+      }
     } else {
       console.error(`[ASYNCFLOW]: Failed to update "${lambdaName}".`);
     }

@@ -111,3 +111,16 @@ export async function deleteJob(lambda_name: string) {
   );
   return res;
 }
+
+export async function deleteBulkJobs(
+  lambdaList: (string | undefined)[] | undefined,
+) {
+  const res = lambdaList?.map(async (lambda_name) => {
+    if (lambda_name) {
+      return await deleteJob(lambda_name);
+    }
+  });
+  if (res) {
+    await Promise.all(res);
+  }
+}

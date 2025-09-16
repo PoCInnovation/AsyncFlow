@@ -2,7 +2,6 @@ import fs from "node:fs";
 import AdmZip from "adm-zip";
 import { GetCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
 
-import { getIntegrityHash } from "./utils/integrity";
 import { sendToLambda } from "./sendLambda";
 import { guessLanguage } from "./utils/language";
 import { dynamoClient, dynamoDocClient } from "./awsClients";
@@ -41,7 +40,7 @@ export function indexJobs() {
       zip.addLocalFolder(`asyncflow/${dir}`);
       zip.writeZip(zipPath);
 
-      const localIntegritHash = getIntegrityHash(zipPath);
+      const localIntegritHash = "<test>";
 
       if (!data.Item || !data.Item.integrityHash) {
         await dynamoClient.send(
@@ -54,7 +53,7 @@ export function indexJobs() {
           }),
         );
 
-        return await sendToLambda(zipPath, dir, language);
+        return await sendToLambda(zipPath, dir, [], language, undefined);
       }
 
       const remoteIntegrityHash = data.Item.integrityHash as string;
@@ -70,7 +69,7 @@ export function indexJobs() {
           }),
         );
 
-        return await sendToLambda(zipPath, dir, language);
+        return await sendToLambda(zipPath, dir, [], language, undefined);
       }
     } catch (err) {
       console.error(`[ASYNCFLOW]: Failed to index job "${dir}".`);

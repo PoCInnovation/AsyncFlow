@@ -3,32 +3,36 @@ import { extname } from "path";
 import { Runtime } from "@aws-sdk/client-lambda";
 import { LambdaLanguage } from "../definitions";
 
-const languageConfig: Record<
+export const languageConfig: Record<
   LambdaLanguage,
-  { Runtime: Runtime; Handler: string }
+  { Runtime: Runtime; Handler: string; Entrypoint: string }
 > = {
   nodejs: {
     Runtime: "nodejs22.x",
     Handler: "index.handler",
+    Entrypoint: "index.js",
   },
   python: {
     Runtime: "python3.13",
     Handler: "lambda_function.lambda_handler",
+    Entrypoint: "",
   },
   ruby: {
     Runtime: "ruby3.4",
     Handler: "lambda_function.lambda_handler",
+    Entrypoint: "",
   },
   java: {
     Runtime: "java21",
     Handler: "example.Handler::handleRequest",
+    Entrypoint: "",
   },
 };
 
 // TODO: I'd like a better way of doing this. I don't like guessing.
 export async function guessLanguage(
   directory: string,
-): Promise<{ Runtime: Runtime; Handler: string } | undefined> {
+): Promise<{ Runtime: Runtime; Handler: string; Entrypoint: string }> {
   const entries = await readdir(directory);
   const lower = entries.map((n) => n.toLowerCase());
 
@@ -79,5 +83,9 @@ export async function guessLanguage(
   }
   if (maxLang && languageConfig[maxLang]) {
     return languageConfig[maxLang];
+  } else {
+    throw new Error(
+      "Couldn't guess your job's language. Check your filesystem for filename errors or use the cli for code generation.",
+    );
   }
 }
