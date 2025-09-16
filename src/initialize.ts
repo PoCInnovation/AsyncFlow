@@ -79,7 +79,6 @@ export async function initializeAsyncFlow() {
       const usedEnvVariables = getUsedEnvVariables(codeDependencies);
       const codePolicies = getCodePolicies(codeDependencies);
       const lambdaRole = await createLambdaRole(lambdaName, codePolicies);
-      await sleep(5000);
 
       await bundleCode(path, bundledFilePath);
       zip.addLocalFolder(jobDirectory);
