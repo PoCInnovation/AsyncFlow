@@ -69,6 +69,8 @@ export class Asyncflow {
     const codePolicies = getCodePolicies(codeDependencies);
     const lambdaRole = await createLambdaRole(hash, codePolicies);
 
+    return new Promise((resolve) => setTimeout(resolve, 3000));
+
     const codeImports = getImports(codeDependencies);
 
     createLambda(

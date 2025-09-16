@@ -42,13 +42,14 @@ async function deleteRoleCompletely(roleName: string | undefined) {
 
 export async function deleteBulkLambdas() {
   const lambdaList = await lambdaClient.send(new ListFunctionsCommand({}));
+
   const promises = (lambdaList.Functions ?? [])
     .filter((lambda) => lambda.FunctionName?.startsWith("ASYNCFLOW-CAL-"))
     .map(async (lambda) => {
-      await deleteRoleCompletely(lambda.FunctionName);
-      return await iamClient.send(
-        new DeleteRoleCommand({ RoleName: lambda.FunctionName }),
+      await lambdaClient.send(
+        new DeleteFunctionCommand({ FunctionName: lambda.FunctionName }),
       );
+      await deleteRoleCompletely(lambda.FunctionName);
     });
 
   await Promise.all(promises);
