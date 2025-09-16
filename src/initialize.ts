@@ -49,7 +49,7 @@ export async function initializeAsyncFlow() {
 
   //checks if asyncflow dir exists and throws error if not
   if (!fs.existsSync("asyncflow/")) {
-    console.error("No asyncflow directory found.");
+    fs.mkdirSync('asyncflow')
     return;
   }
 
