@@ -1,7 +1,7 @@
 import { createHash } from "crypto";
 import { createLambda, deleteBulkLambdas } from "./utils/lambda";
 import { lambdaClient } from "./awsClients";
-import { GetFunctionCommand, InvokeCommand } from "@aws-sdk/client-lambda";
+import { GetFunctionCommand, InvokeCommand, ListFunctionsCommand } from "@aws-sdk/client-lambda";
 import { getCodeDependencies, getImports } from "./utils/codeParser";
 import { getUsedEnvVariables } from "./utils/environment";
 import { getCodePolicies, createLambdaRole } from "./utils/roles";
@@ -47,7 +47,7 @@ export async function resourceAvailable(
 }
 
 async function sleep(ms: number){
-  return new Promise((resolve) => setTimeout(resolve, 3000));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export class Asyncflow {
@@ -55,9 +55,12 @@ export class Asyncflow {
 
   static async init() {
     const asyncflowInstance = new Asyncflow();
-    await deleteBulkLambdas();
+    const res = await lambdaClient.send(new ListFunctionsCommand({}));
+    const lambdaList = res.Functions?.filter((lambda) => lambda.FunctionName?.startsWith("ASYNCFLOW-CAL-")).map(lambda=>lambda.FunctionName)
+    await deleteBulkLambdas(lambdaList);
     return asyncflowInstance;
   }
+
 
   async addJob<F extends (...args: any[]) => any>(
     fun: SerializableFunction<F>,
@@ -72,9 +75,10 @@ export class Asyncflow {
     const usedEnvVariables = getUsedEnvVariables(codeDependencies);
     const codePolicies = getCodePolicies(codeDependencies);
     const lambdaRole = await createLambdaRole(hash, codePolicies);
+    const codeImports = getImports(codeDependencies);
+
     await sleep(3000)
 
-    const codeImports = getImports(codeDependencies);
 
     createLambda(
       hash,

@@ -40,19 +40,18 @@ async function deleteRoleCompletely(roleName: string | undefined) {
   await iamClient.send(new DeleteRoleCommand({ RoleName: roleName }));
 }
 
-export async function deleteBulkLambdas() {
-  const lambdaList = await lambdaClient.send(new ListFunctionsCommand({}));
+export async function deleteBulkLambdas(lambdaList: (string | undefined)[] | undefined) {
 
-  const promises = (lambdaList.Functions ?? [])
-    .filter((lambda) => lambda.FunctionName?.startsWith("ASYNCFLOW-CAL-"))
-    .map(async (lambda) => {
-      await lambdaClient.send(
-        new DeleteFunctionCommand({ FunctionName: lambda.FunctionName }),
-      );
-      await deleteRoleCompletely(lambda.FunctionName);
-    });
+  if (lambdaList){
+    const promises = lambdaList.map(async (lambda) => {
+        await lambdaClient.send(
+          new DeleteFunctionCommand({ FunctionName: lambda }),
+        );
+        await deleteRoleCompletely(lambda);
+      });
 
-  await Promise.all(promises);
+    await Promise.all(promises);
+  }
 }
 
 export function createLambda(
