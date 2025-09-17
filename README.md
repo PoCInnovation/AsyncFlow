@@ -74,17 +74,19 @@ You can use AsyncFlow in two different ways, depending on your needs and project
 Use AsyncFlow.init() to initialize the AsyncFlow client, then use the addJob() method to declare a new job by passing a callback function that contains the code to be executed asynchronously.
 
 ```ts
+import { Asyncflow } from 'asyncflow/sdk';
 
-import {Asyncflow} from 'asyncflow/sdk';
+asyncflowClient = await Asyncflow.init()
 
-try {
-    asyncflowClient = await Asyncflow.init()
-    await asyncflowClient.addJob(()=>{
-            const foobar = require("./foo/bar.js")
-             console.log("Hello World!")
-             console.log(s)
-        })
-}
+export const githubCall = await asyncflowClient.addJob(()=>{
+  const response = await fetch("https://api.github/...");
+  // Math, or something interesting
+  return response.body.ok;
+})
+
+export const analysis = await asyncflowClient.addJob((multiplier: number)=>{
+  return 42 * multiplier;
+})
 ```
 
 
@@ -108,7 +110,6 @@ Job name : foobar
 // ./asyncflow/foobar/index.js
 
 export const handler = async (event) => {
-  // TODO implement
   const response = {
     statusCode: 200,
     body: JSON.stringify('Hello from Lambda!'),
