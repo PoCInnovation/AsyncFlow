@@ -1,14 +1,22 @@
 import { createHash } from "crypto";
-import { createLambda, deleteBulkLambdas, sleep } from "./utils/lambda";
+import {  deleteBulkLambdas, sleep } from "./utils/lambda";
 import { lambdaClient } from "./awsClients";
+import { getUsedEnvVariables } from "./utils/environment";
+import { getCodePolicies, createLambdaRole } from "./utils/roles";
+import { languageConfig } from "./utils/language";
 import {
   GetFunctionCommand,
   InvokeCommand,
   ListFunctionsCommand,
 } from "@aws-sdk/client-lambda";
-import { getCodeDependencies, getImports } from "./utils/codeParser";
-import { getUsedEnvVariables } from "./utils/environment";
-import { getCodePolicies, createLambdaRole } from "./utils/roles";
+import { bundleCode } from "./utils/codeParser";
+import { resolve, dirname } from "path";
+import { getCallerFile } from "./utils/codeParser";
+import { rmSync, writeFileSync } from "fs";
+import { tmpdir } from "os";
+import { fileURLToPath } from "url";
+import AdmZip from "adm-zip";
+import { sendToLambda } from "./sendLambda";
 
 type JSONPrimitive = string | number | boolean | null;
 
@@ -50,6 +58,33 @@ export async function resourceAvailable(
   throw new Error(`Lambda "${hash}" never became ready`);
 }
 
+function isAsync(fn: unknown): fn is (...args: any[]) => Promise<any> {
+  const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+  return typeof fn === "function" && fn instanceof AsyncFunction;
+}
+
+
+function injectCode<F extends (...args: any[]) => any>(
+  fun: SerializableFunction<F>,
+){
+  let respString = 'const response = fn()'
+  if (isAsync(fun)){
+    respString = 'const response = await fn() '
+  }
+
+  return `
+  export const handler = async (event) => {
+  const fn = ${fun.toString()}
+
+  ${respString}
+  // TODO implement
+  return {
+    statusCode: 200,
+    body: JSON.stringify(response),
+  };
+};`
+}
+
 export class Asyncflow {
   private constructor() {}
 
@@ -66,34 +101,52 @@ export class Asyncflow {
   async addJob<F extends (...args: any[]) => any>(
     fun: SerializableFunction<F>,
   ): Promise<(...args: Parameters<F>) => Promise<ReturnType<F>>> {
-    const contents = fun.toString();
-    const hash = (
+    const contents = injectCode(fun);
+    const lambdaName = (
       "ASYNCFLOW-CAL-" +
       createHash("sha256").update(contents, "utf8").digest("hex")
     ).slice(0, 64);
 
-    const codeDependencies = await getCodeDependencies(contents, false);
-    const usedEnvVariables = getUsedEnvVariables(codeDependencies);
+    const callerFile = getCallerFile()
+    if (!callerFile){
+      throw new Error()
+    }
+    const __dirname = dirname(fileURLToPath(callerFile));
+    const entrypointPath = resolve(__dirname, lambdaName + '.js')
+    const bundledFilePath = resolve(tmpdir(), "asyncflow", lambdaName, "index.js")
+    const zipPath = resolve(tmpdir(), "asyncflow", lambdaName + '.zip')
+
+    writeFileSync(entrypointPath, contents)
+
+    const codeDependencies = await bundleCode(entrypointPath, bundledFilePath);
+    if (!codeDependencies){
+      throw new Error()
+    }
+    const usedEnvVariables = getUsedEnvVariables([...codeDependencies, entrypointPath]);
     const codePolicies = getCodePolicies(codeDependencies);
-    const lambdaRole = await createLambdaRole(hash, codePolicies);
-    const codeImports = getImports(codeDependencies);
+    const lambdaRole = await createLambdaRole(lambdaName, codePolicies);
+    rmSync(entrypointPath)
+    await sleep(10000)
 
-    await sleep(3000);
+    const zip = new AdmZip();
+    zip.addLocalFile(bundledFilePath)
+    zip.writeZip(zipPath);
 
-    createLambda(
-      hash,
-      contents,
+
+    await sendToLambda(
+      zipPath,
+      lambdaName,
       usedEnvVariables,
-      lambdaRole.Role?.Arn,
-      codeImports,
-    );
+      languageConfig.nodejs,
+      lambdaRole.Role?.Arn
+    )
 
     return async (...args) => {
-      await resourceAvailable(hash);
+      await resourceAvailable(lambdaName);
 
       const request = await lambdaClient.send(
         new InvokeCommand({
-          FunctionName: hash,
+          FunctionName: lambdaName,
           Payload: JSON.stringify(args),
         }),
       );

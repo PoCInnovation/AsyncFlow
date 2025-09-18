@@ -13,11 +13,10 @@ import {
 } from "./utils/dynamodb";
 import { resolve } from "node:path";
 import { deleteBulkLambdas } from "./utils/lambda";
-import { bundleCode, getCodeDependencies } from "./utils/codeParser";
+import { bundleCode } from "./utils/codeParser";
 import { getUsedEnvVariables } from "./utils/environment";
 import { getCodePolicies, createLambdaRole } from "./utils/roles";
 import { tmpdir } from "node:os";
-import { sleep } from "./utils/lambda";
 
 async function checkDeletedJobs() {
   const jobs = await getAllJobs();
@@ -66,8 +65,8 @@ export async function initializeAsyncFlow() {
       const zipPath = jobDirectory + ".zip";
       const bundledFilePath = resolve(jobDirectory, language.Entrypoint);
 
-      const path = resolve("asyncflow", dir, language.Entrypoint);
-      if (!fs.existsSync(path)) {
+      const entrypointPath = resolve("asyncflow", dir, language.Entrypoint);
+      if (!fs.existsSync(entrypointPath)) {
         throw new Error(
           "Failed to index asyncflow/" + dir + " file not found.",
         );
@@ -75,12 +74,14 @@ export async function initializeAsyncFlow() {
       //creates new zip file at /tmp
       const zip = new AdmZip();
 
-      const codeDependencies = await getCodeDependencies(path, true);
-      const usedEnvVariables = getUsedEnvVariables(codeDependencies);
+      const codeDependencies = await bundleCode(entrypointPath, bundledFilePath);
+      if (!codeDependencies){
+        throw new Error()
+      }
+      const usedEnvVariables = getUsedEnvVariables([...codeDependencies, entrypointPath]);
       const codePolicies = getCodePolicies(codeDependencies);
       const lambdaRole = await createLambdaRole(lambdaName, codePolicies);
 
-      await bundleCode(path, bundledFilePath);
       zip.addLocalFolder(jobDirectory);
       zip.writeZip(zipPath);
 

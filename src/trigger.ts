@@ -1,10 +1,9 @@
 import { InvokeCommand, InvokeCommandOutput } from "@aws-sdk/client-lambda";
 import { NODE_ENV } from "./utils/constants";
 import { isEnvironmentValid } from "./utils/credentials";
-import { indexJobs } from "./indexJobs";
 import { lambdaClient } from "./awsClients";
-import { initialize } from "esbuild";
 import { initializeAsyncFlow } from "./initialize";
+
 
 interface TriggerAsyncflowJobOptions<T> {
   callback?: (a: LambdaResponse<T> | null) => void;

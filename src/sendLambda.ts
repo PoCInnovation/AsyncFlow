@@ -3,7 +3,6 @@ import {
   Runtime,
   UpdateFunctionCodeCommand,
   UpdateFunctionConfigurationCommand,
-  waitUntilFunctionUpdatedV2,
   GetFunctionConfigurationCommand,
 } from "@aws-sdk/client-lambda";
 import { readFile } from "fs/promises";
@@ -56,15 +55,6 @@ export async function sendToLambda(
   for (const envVar of envVariablesArray) {
     envVariables[envVar.key] = envVar.value;
   }
-
-  //Now trying to follow the least priviledge practice,
-  // lambdas no longer have the full access overall role, only the full access to a targeted service
-
-  // const roleArn = await resolveRoleArn();
-  // if (roleArn === undefined) {
-  //   console.error("[ASYNCFLOW]: Couldn't resolve IAM role.");
-  //   return;
-  // }
 
   const zipBuffer = await readFile(zipPath);
 
