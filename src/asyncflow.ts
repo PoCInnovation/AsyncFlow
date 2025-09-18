@@ -1,5 +1,5 @@
 import { createHash } from "crypto";
-import {  deleteBulkLambdas, sleep } from "./utils/lambda";
+import { sleep } from "./utils/lambda";
 import { lambdaClient } from "./awsClients";
 import { getUsedEnvVariables } from "./utils/environment";
 import { getCodePolicies, createLambdaRole } from "./utils/roles";
@@ -7,7 +7,6 @@ import { languageConfig } from "./utils/language";
 import {
   GetFunctionCommand,
   InvokeCommand,
-  ListFunctionsCommand,
 } from "@aws-sdk/client-lambda";
 import { bundleCode } from "./utils/codeParser";
 import { resolve, dirname } from "path";
@@ -17,6 +16,7 @@ import { tmpdir } from "os";
 import { fileURLToPath } from "url";
 import AdmZip from "adm-zip";
 import { sendToLambda } from "./sendLambda";
+import { initDirectories, initCallbacks } from "./initialize";
 
 type JSONPrimitive = string | number | boolean | null;
 
@@ -88,14 +88,18 @@ function injectCode<F extends (...args: any[]) => any>(
 export class Asyncflow {
   private constructor() {}
 
-  static async init() {
+  static async init(
+    initializeDirectories: boolean = true,
+    initializeCallbacks: boolean = true,) {
+
     const asyncflowInstance = new Asyncflow();
-    const res = await lambdaClient.send(new ListFunctionsCommand({}));
-    const lambdaList = res.Functions?.filter((lambda) =>
-      lambda.FunctionName?.startsWith("ASYNCFLOW-CAL-"),
-    ).map((lambda) => lambda.FunctionName);
-    await deleteBulkLambdas(lambdaList);
-    return asyncflowInstance;
+    if (initializeDirectories){
+      await initDirectories()
+    }
+    if (initializeCallbacks){
+      await initCallbacks()
+    }
+    return asyncflowInstance
   }
 
   async addJob<F extends (...args: any[]) => any>(

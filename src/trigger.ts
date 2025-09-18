@@ -2,7 +2,7 @@ import { InvokeCommand, InvokeCommandOutput } from "@aws-sdk/client-lambda";
 import { NODE_ENV } from "./utils/constants";
 import { isEnvironmentValid } from "./utils/credentials";
 import { lambdaClient } from "./awsClients";
-import { initializeAsyncFlow } from "./initialize";
+import { initDirectories } from "./initialize";
 
 
 interface TriggerAsyncflowJobOptions<T> {
@@ -46,7 +46,7 @@ export function triggerJob<T>(
 ) {
   if (!isEnvironmentValid()) return;
 
-  if (NODE_ENV !== "production") initializeAsyncFlow();
+  if (NODE_ENV !== "production") initDirectories();
 
   const command = new InvokeCommand({
     FunctionName: jobName,

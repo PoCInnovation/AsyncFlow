@@ -17,6 +17,8 @@ import { bundleCode } from "./utils/codeParser";
 import { getUsedEnvVariables } from "./utils/environment";
 import { getCodePolicies, createLambdaRole } from "./utils/roles";
 import { tmpdir } from "node:os";
+import { lambdaClient } from "./awsClients";
+import { ListFunctionsCommand } from "@aws-sdk/client-lambda";
 
 async function checkDeletedJobs() {
   const jobs = await getAllJobs();
@@ -35,7 +37,15 @@ async function checkDeletedJobs() {
   return jobsToDelete;
 }
 
-export async function initializeAsyncFlow() {
+export async function initCallbacks(){
+    const res = await lambdaClient.send(new ListFunctionsCommand({}));
+    const lambdaList = res.Functions?.filter((lambda) =>
+      lambda.FunctionName?.startsWith("ASYNCFLOW-CAL-"),
+    ).map((lambda) => lambda.FunctionName);
+    await deleteBulkLambdas(lambdaList);
+}
+
+export async function initDirectories() {
   if (!isEnvironmentValid()) return;
 
   //updates deleted jobs
