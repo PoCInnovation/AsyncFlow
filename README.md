@@ -28,6 +28,7 @@ It works.
 
 [Explain how to install all of the project's dependencies]
 AsyncFlow presents itself as a node package (supposedly).
+
 ```bash
 npm install asyncflow
 ```
@@ -35,6 +36,7 @@ npm install asyncflow
 ### Quickstart
 
 Boilerplate:
+
 ```ts
 import { AsyncFlow } from "asyncflow/sdk";
 ```
@@ -42,12 +44,12 @@ import { AsyncFlow } from "asyncflow/sdk";
 ### Usage
 
 Boilerplate:
+
 ```ts
 import { AsyncFlow } from "asyncflow/sdk";
 
-AsyncFlow("mail")
+AsyncFlow("mail");
 ```
-
 
 ## Get involved
 
