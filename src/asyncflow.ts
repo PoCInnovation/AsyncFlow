@@ -14,7 +14,11 @@ import { fileURLToPath } from "url";
 import AdmZip from "adm-zip";
 import { sendToLambda } from "./sendLambda";
 import { initDirectories, initCallbacks } from "./initialize";
-import { triggerDirectoryJob, TriggerAsyncflowJobOptions, LambdaResponse } from "./trigger";
+import {
+  triggerDirectoryJob,
+  TriggerAsyncflowJobOptions,
+  LambdaResponse,
+} from "./trigger";
 
 type JSONPrimitive = string | number | boolean | null;
 
@@ -99,13 +103,11 @@ export class Asyncflow {
     return asyncflowInstance;
   }
 
-
-
   triggerDirectoryJob<T>(
     jobName: string,
     options?: TriggerAsyncflowJobOptions<T>,
-  ){
-    triggerDirectoryJob(jobName, options)
+  ) {
+    triggerDirectoryJob(jobName, options);
   }
 
   async addJob<F extends (...args: any[]) => any>(
