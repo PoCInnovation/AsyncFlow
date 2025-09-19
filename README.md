@@ -198,7 +198,7 @@ Developers
 | :---: | :---: | :---: |
 
 Manager
-| [<img src="https://github.com/pierrelissope.png?size=85" width=85><br><sub>[Manager's name]</sub>](https://github.com/adrienfort)
+| [<img src="https://github.com/pierrelissope.png?size=85" width=85><br><sub>Pierre Lissopé</sub>](https://github.com/pierrelissope)
 | :---: |
 
 <h2 align=center>
