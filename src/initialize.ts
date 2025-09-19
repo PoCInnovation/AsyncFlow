@@ -22,27 +22,27 @@ import { ListFunctionsCommand } from "@aws-sdk/client-lambda";
 
 async function checkDeletedJobs() {
   const jobs = await getAllJobs();
-  let jobsToDelete: string[] = [];
+  const jobsToDelete: string[] = [];
 
   for (const job of jobs) {
-    const lambda_name = job["lambda_name"].S;
-    const path = resolve(
-      "asyncflow",
-      lambda_name.replace("ASYNCFLOW-DIR-", ""),
-    );
+    const lambdaAttr = job["lambda_name"];
+    if (!lambdaAttr || !lambdaAttr.S) continue;
+
+    const lambdaName = lambdaAttr.S;
+    const path = resolve("asyncflow", lambdaName.replace("ASYNCFLOW-DIR-", ""));
     if (!fs.existsSync(path)) {
-      jobsToDelete = jobsToDelete.concat(lambda_name);
+      jobsToDelete.push(lambdaName);
     }
   }
   return jobsToDelete;
 }
 
-export async function initCallbacks(){
-    const res = await lambdaClient.send(new ListFunctionsCommand({}));
-    const lambdaList = res.Functions?.filter((lambda) =>
-      lambda.FunctionName?.startsWith("ASYNCFLOW-CAL-"),
-    ).map((lambda) => lambda.FunctionName);
-    await deleteBulkLambdas(lambdaList);
+export async function initCallbacks() {
+  const res = await lambdaClient.send(new ListFunctionsCommand({}));
+  const lambdaList = res.Functions?.filter((lambda) =>
+    lambda.FunctionName?.startsWith("ASYNCFLOW-CAL-"),
+  ).map((lambda) => lambda.FunctionName);
+  await deleteBulkLambdas(lambdaList);
 }
 
 export async function initDirectories() {
@@ -84,11 +84,17 @@ export async function initDirectories() {
       //creates new zip file at /tmp
       const zip = new AdmZip();
 
-      const codeDependencies = await bundleCode(entrypointPath, bundledFilePath);
-      if (!codeDependencies){
-        throw new Error()
+      const codeDependencies = await bundleCode(
+        entrypointPath,
+        bundledFilePath,
+      );
+      if (!codeDependencies) {
+        throw new Error();
       }
-      const usedEnvVariables = getUsedEnvVariables([...codeDependencies, entrypointPath]);
+      const usedEnvVariables = getUsedEnvVariables([
+        ...codeDependencies,
+        entrypointPath,
+      ]);
       const codePolicies = getCodePolicies(codeDependencies);
       const lambdaRole = await createLambdaRole(lambdaName, codePolicies);
 

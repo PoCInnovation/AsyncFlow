@@ -1,13 +1,10 @@
-import {
-  DeleteFunctionCommand,
-} from "@aws-sdk/client-lambda";
+import { DeleteFunctionCommand } from "@aws-sdk/client-lambda";
 import {
   DeleteRoleCommand,
   ListAttachedRolePoliciesCommand,
   DetachRolePolicyCommand,
 } from "@aws-sdk/client-iam";
 import { lambdaClient, iamClient } from "../awsClients";
-
 
 async function deleteRoleCompletely(roleName: string | undefined) {
   const attachedPolicies = await iamClient.send(

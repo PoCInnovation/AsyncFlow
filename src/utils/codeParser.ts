@@ -2,7 +2,7 @@
 import strip from "strip-comments";
 import { build } from "esbuild";
 
-export function getCallerFile(): (string | undefined) | null{
+export function getCallerFile(): (string | undefined) | null {
   const originalPrepareStackTrace = Error.prepareStackTrace;
 
   try {
@@ -43,8 +43,8 @@ export async function bundleCode(path: string, outfile: string) {
       }
     }
     return filtered;
-  } catch (err){
-    console.log(err)
+  } catch (err) {
+    console.log(err);
   }
 }
 
@@ -55,4 +55,3 @@ export function isStringInCode(contents: string, varKey: string): boolean {
   }
   return false;
 }
-
