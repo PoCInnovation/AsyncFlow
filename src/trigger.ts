@@ -4,13 +4,13 @@ import { isEnvironmentValid } from "./utils/credentials";
 import { lambdaClient } from "./awsClients";
 import { initDirectories } from "./initialize";
 
-interface TriggerAsyncflowJobOptions<T> {
+export interface TriggerAsyncflowJobOptions<T> {
   callback?: (a: LambdaResponse<T> | null) => void;
-  onrejected?: () => void;
+  onrejected?: (err: any) => void;
   payload?: Record<string, any>;
 }
 
-interface LambdaResponse<T> {
+export interface LambdaResponse<T> {
   statusCode: number;
   body: T;
 }
@@ -39,7 +39,7 @@ function callback<T>(
   }
 }
 
-export function triggerJob<T>(
+export function triggerDirectoryJob<T>(
   jobName: string,
   options?: TriggerAsyncflowJobOptions<T>,
 ) {
@@ -47,8 +47,10 @@ export function triggerJob<T>(
 
   if (NODE_ENV !== "production") initDirectories();
 
+  const lambdaName = "ASYNCFLOW-DIR-" + jobName;
+
   const command = new InvokeCommand({
-    FunctionName: jobName,
+    FunctionName: lambdaName,
     InvocationType: "RequestResponse",
     Payload: options?.payload ? JSON.stringify(options.payload) : undefined,
   });
@@ -56,7 +58,9 @@ export function triggerJob<T>(
   lambdaClient
     .send(command)
     .then((res) => callback(res, options))
-    .catch(() =>
-      options?.onrejected ? options.onrejected() : defaultOnrejected(jobName),
+    .catch((err) =>
+      options?.onrejected
+        ? options.onrejected(err)
+        : defaultOnrejected(jobName),
     );
 }
