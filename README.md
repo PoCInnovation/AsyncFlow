@@ -177,14 +177,14 @@ import  {Asyncflow}  from 'asyncflow';
 const asyncflowClient = await Asyncflow.init()
 
 asyncflowClient.triggerDirectoryJob('foobar', {
-        callback: (res)=>{
-            console.log(res)
-        },
-        onrejected: (err)=>{
-            console.error(err)
-        },
-        payload: { statusCode: 200, body: 'this is a payload' }
-    })
+  callback: (res)=>{
+    console.log(res)
+  },
+  onrejected: (err)=>{
+    console.error(err)
+  },
+  payload: { statusCode: 200, body: 'this is a payload' }
+})
 ```
 
 As simple as that!

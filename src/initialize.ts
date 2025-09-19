@@ -1,116 +1,132 @@
-import {
-  CreateTableCommand,
-  DescribeTableCommand,
-  ListTablesCommand,
-} from "@aws-sdk/client-dynamodb";
 import fs from "node:fs";
 import AdmZip from "adm-zip";
 import { isEnvironmentValid } from "./utils/credentials";
 import { getIntegrityHash } from "./utils/integrity";
 import { sendToLambda } from "./sendLambda";
 import { guessLanguage } from "./utils/language";
-import { getJob, updateJob } from "./utils/dynamodb";
-import { dynamoClient } from "./awsClients";
+import {
+  getJob,
+  updateJob,
+  getAllJobs,
+  createAsyncflowTable,
+  deleteBulkJobs,
+} from "./utils/dynamodb";
+import { resolve } from "node:path";
+import { deleteBulkLambdas } from "./utils/lambda";
+import { bundleCode } from "./utils/codeParser";
+import { getUsedEnvVariables } from "./utils/environment";
+import { getCodePolicies, createLambdaRole } from "./utils/roles";
+import { tmpdir } from "node:os";
+import { lambdaClient } from "./awsClients";
+import { ListFunctionsCommand } from "@aws-sdk/client-lambda";
 
-async function waitForDbActivation(tableName: string) {
-  while (true) {
-    try {
-      const data = await dynamoClient.send(
-        new DescribeTableCommand({ TableName: tableName }),
-      );
-      if (data.Table && data.Table.TableStatus === "ACTIVE") {
-        return;
-      }
-    } catch (err) {
-      console.error("[ASYNCFLOW]: Error checking for database.");
+async function checkDeletedJobs() {
+  const jobs = await getAllJobs();
+  const jobsToDelete: string[] = [];
+
+  for (const job of jobs) {
+    const lambdaAttr = job["lambda_name"];
+    if (!lambdaAttr || !lambdaAttr.S) continue;
+
+    const lambdaName = lambdaAttr.S;
+    const path = resolve("asyncflow", lambdaName.replace("ASYNCFLOW-DIR-", ""));
+    if (!fs.existsSync(path)) {
+      jobsToDelete.push(lambdaName);
     }
-    await new Promise((resolve) => setTimeout(resolve, 3000));
   }
+  return jobsToDelete;
 }
 
-async function createAsyncflowTable() {
-  try {
-    const data = await dynamoClient.send(new ListTablesCommand({}));
-    const exists = data.TableNames && data.TableNames.includes("Asyncflow");
-    if (exists) {
-      return;
-    }
-    await dynamoClient.send(
-      new CreateTableCommand({
-        TableName: "Asyncflow",
-        KeySchema: [{ AttributeName: "lambda_name", KeyType: "HASH" }],
-        AttributeDefinitions: [
-          { AttributeName: "lambda_name", AttributeType: "S" },
-        ],
-        ProvisionedThroughput: {
-          ReadCapacityUnits: 5,
-          WriteCapacityUnits: 5,
-        },
-      }),
-    );
-    await waitForDbActivation("Asyncflow");
-  } catch (_) {
-    console.error("[ASYNCFLOW]: Unexpected error while creating tables");
-  }
+export async function initCallbacks() {
+  const res = await lambdaClient.send(new ListFunctionsCommand({}));
+  const lambdaList = res.Functions?.filter((lambda) =>
+    lambda.FunctionName?.startsWith("ASYNCFLOW-CAL-"),
+  ).map((lambda) => lambda.FunctionName);
+  await deleteBulkLambdas(lambdaList);
 }
 
-export async function initializeAsyncFlow() {
+export async function initDirectories() {
   if (!isEnvironmentValid()) return;
+
+  //updates deleted jobs
+  const jobsToDelete = await checkDeletedJobs();
+  await deleteBulkLambdas(jobsToDelete);
+  await deleteBulkJobs(jobsToDelete);
 
   await createAsyncflowTable();
 
-  //checks if asyncflow dir exists and throws error if not
-  if (!fs.existsSync("asyncflow/")) {
-    console.error("No asyncflow directory found.");
-    return;
-  }
+  fs.mkdirSync("asyncflow", { recursive: true });
 
-  //checks if there is any jobs, throws error if not
+  //checks if there is any jobs
   const asyncflowDir = fs.readdirSync("asyncflow", "utf8");
-  if (asyncflowDir.length == 0) {
-    return;
-  }
-  //creates temporary dir for zip files
-  if (!fs.existsSync("/tmp/asyncflow")) {
-    fs.mkdirSync("/tmp/asyncflow", { recursive: true });
-  }
 
-  const zip = new AdmZip();
+  //creates temporary dir for zip files
+
+  fs.mkdirSync(resolve(tmpdir(), "asyncflow"), { recursive: true });
 
   //iterates through each job
   asyncflowDir.forEach(async (dir) => {
     try {
       const language = await guessLanguage("asyncflow/" + dir);
 
-      if (language === undefined) {
-        console.error(
-          "[ASYNCFLOW]: Couldn't guess your job's language. Check your filesystem for filename errors or use the cli for code generation.",
-        );
-        return;
-      }
+      const jobDirectory = resolve(tmpdir(), "asyncflow", dir);
+      const lambdaName = "ASYNCFLOW-DIR-" + dir;
 
-      const zipPath = "/tmp/asyncflow/" + dir + ".zip";
-      const path = "asyncflow/" + dir;
-      if (!fs.readdirSync(path)[0]) {
-        console.error("Failed to index asyncflow/" + dir, "file not found.");
-        return;
+      const zipPath = jobDirectory + ".zip";
+      const bundledFilePath = resolve(jobDirectory, language.Entrypoint);
+
+      const entrypointPath = resolve("asyncflow", dir, language.Entrypoint);
+      if (!fs.existsSync(entrypointPath)) {
+        throw new Error(
+          "Failed to index asyncflow/" + dir + " file not found.",
+        );
       }
       //creates new zip file at /tmp
-      zip.addLocalFolder(path);
+      const zip = new AdmZip();
+
+      const codeDependencies = await bundleCode(
+        entrypointPath,
+        bundledFilePath,
+      );
+      if (!codeDependencies) {
+        throw new Error();
+      }
+      const usedEnvVariables = getUsedEnvVariables([
+        ...codeDependencies,
+        entrypointPath,
+      ]);
+      const codePolicies = getCodePolicies(codeDependencies);
+      const lambdaRole = await createLambdaRole(lambdaName, codePolicies);
+
+      zip.addLocalFolder(jobDirectory);
       zip.writeZip(zipPath);
 
       //generates integrity hash
-      const integrityHash = getIntegrityHash(zipPath);
+      const integrityHash = getIntegrityHash({
+        bundledFilePath,
+        usedEnvVariables,
+        codePolicies,
+      });
 
-      const job = await getJob(dir);
-      console.log(typeof job?.integrityHash, job?.integrityHash);
-      // @ts-ignore:
-      if (!job || job.integrityHash != integrityHash) {
-        await updateJob(dir, integrityHash);
+      const job = await getJob(lambdaName);
+
+      if (!job || job.integrityHash.S != integrityHash) {
+        await updateJob(lambdaName, integrityHash);
+        await sendToLambda(
+          zipPath,
+          lambdaName,
+          usedEnvVariables,
+          language,
+          lambdaRole.Role?.Arn,
+        );
       }
-      await sendToLambda(zipPath, dir, language);
     } catch (err) {
-      console.error(`[ASYNCFLOW]: Failed to initialize job "${dir}".`);
+      if (err instanceof Error) {
+        console.error(err);
+        console.error(
+          `[ASYNCFLOW]: Failed to initialize job "${dir}", ${err.message}.`,
+        );
+      }
     }
   });
 }
