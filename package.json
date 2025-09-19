@@ -1,5 +1,5 @@
 {
-  "name": "asyncflow",
+  "name": "asyncflow-sdk",
   "version": "1.0.0",
   "description": "Asyncflow project",
   "main": "./dist/index.js",
