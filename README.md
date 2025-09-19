@@ -20,36 +20,174 @@ We provide an SDK to interact with your cloud provider's API.
 
 ### How does it work?
 
-It works.
+AsyncFlow simplifies cloud function execution by providing a lightweight SDK that abstracts away the complexity of the AWS infrastructure.
+
+Instead of directly managing functions, permissions, or deployments, you use our SDK to define and trigger asynchronous tasks through a unified API.
+
+Asyncflow will handle everything, from environment variables to dependencies and role permissions.
 
 ## Getting Started
 
 ### Installation
 
-[Explain how to install all of the project's dependencies]
-AsyncFlow presents itself as a node package (supposedly).
+AsyncFlow presents itself as a node package.
 
 ```bash
 npm install asyncflow
 ```
 
+You might want to use our CLI in order to use Asyncflow using directories.
+
+```bash
+npm -g install asyncflow-cli
+```
+
 ### Quickstart
 
-Boilerplate:
+To use AsyncFlow with AWS, you need to provide your AWS credentials. Create a **.env** file at the root of your project:
 
-```ts
-import { AsyncFlow } from "asyncflow/sdk";
+```bash
+your-project/
+├── .env
+├── src/
+├── package.json
+└── README.md
 ```
+
+Then, provide your AWS credentials, **AWS_ACCESS_KEY** and **AWS_SECRET_KEY**
+
+```bash
+//.env
+
+AWS_ACCESS_KEY=XXXXXXX
+AWS_SECRET_KEY=XXXXXXXXXXXXXXXXXXXXX
+```
+Make sure the user associated with these credentials has the necessary permissions to perform all intended actions. We recommend following the principle of least privilege.
+
 
 ### Usage
 
-Boilerplate:
+First, call
 
 ```ts
-import { AsyncFlow } from "asyncflow/sdk";
-
-AsyncFlow("mail");
+import "dotenv/config"
+import  {Asyncflow}  from 'asyncflow';
 ```
+
+to retrieve the credentials you declared in the .env file you created at your project's root, as explained above. Then import the `Asyncflow` library. The order is important, since Asyncflow cannot work without having your credentials.
+
+Then, you need to first initialize the Asyncflow client, with the `Asyncflow.init` method. It takes two parameters, `initializeDirectories` and `initializeCallbacks`, that are both `true` by default.
+
+You can disable them if you're not working with them.
+
+```ts
+import "dotenv/config"
+import  {Asyncflow}  from 'asyncflow';
+
+
+const asyncflowClient = await Asyncflow.init({
+  // initializeDirectories: true,
+  // initializeCallbacks: true,
+})
+```
+
+You can create jobs with Asyncflow in two different ways, depending on your needs and project structure:
+
+## 1. Using Asyncflow SDK wrapper
+
+ Use the `Asyncflow.addJob` method to declare a new job by passing a callback function that contains the code to be executed asynchronously. It will return an asynchronous function that can then be used to trigger the job you've added. You can pass to the asynchronous function any arguments, it will then be used as a payload that will be passed to the job in the cloud.
+
+```ts
+import "dotenv/config"
+import  {Asyncflow}  from 'asyncflow';
+
+const asyncflowClient = await Asyncflow.init()
+
+const githubCall = await asyncflowClient.addJob(()=>{
+  const response = await fetch("https://api.github/...");
+  return response;
+})
+// The job is now created, you can now invoke it whenever you want
+const githubCallResult = await githubCall()
+console.log(githubCallResult)
+
+
+const analysis = await asyncflowClient.addJob((multiplier: number)=>{
+  return 42 * multiplier;
+})
+const analysisResult = await analysis(21)
+```
+
+
+## 2. Using Asyncflow CLI
+
+Use the `asyncflow-cli` to create directories with jobs boilerplates
+
+```bash
+asyncflow-cli create foobar node
+```
+```bash
+asyncflow/
+└── foobar/
+    ├── index.js
+    └── package.json
+
+Job name : foobar
+```
+
+```ts
+// ./asyncflow/foobar/index.js
+
+export const handler = async (event) => {
+  const response = {
+    statusCode: 200,
+    body: JSON.stringify('Hello from Lambda!'),
+  };
+  return response;
+};
+
+```
+
+The command above creates a directory inside `asyncflow/` named `foobar` with a `index.js` and `package.json` file inside. The job will have the same name as the directory name. You can then write code inside this directory.
+
+
+You only need to initialize the Asyncflow client — it will automatically create the jobs located in your `asyncflow/` directory, if they don't already exist.
+
+To trigger a job created during initialization, use `Asyncflow.trigger`, which takes two parameters: the name of the job, and an optional configuration object.
+
+You can pass the following options:
+
+```ts
+LambdaResponse<T> {
+  statusCode: number;
+  body: T;
+}
+
+options: {
+  payload?: Record<string, any>;
+  callback?: (a: LambdaResponse<T> | null) => void;
+  onrejected?: (err: any) => void;
+}
+```
+
+```ts
+import "dotenv/config"
+import  {Asyncflow}  from 'asyncflow';
+
+const asyncflowClient = await Asyncflow.init()
+
+asyncflowClient.triggerDirectoryJob('foobar', {
+  callback: (res)=>{
+    console.log(res)
+  },
+  onrejected: (err)=>{
+    console.error(err)
+  },
+  payload: { statusCode: 200, body: 'this is a payload' }
+})
+```
+
+As simple as that!
 
 ## Get involved
 
@@ -60,7 +198,7 @@ If you're interested in how the project is organized at a higher level, please c
 ## Our PoC team ❤️
 
 Developers
-| [<img src=".github/assets/pierre.png" width=85><br><sub>Pierre Riss</sub>](https://github.com/MrZalTy) | [<img src=".github/assets/loan.jpeg" width=85><br><sub>Loan Riyanto</sub>](https://github.com/MrZalTy) | [<img src=".github/assets/laurent.jpg" width=85><br><sub>Laurent Gonzalez</sub>](https://github.com/MrZalTy)
+| [<img src=".github/assets/pierre.png" width=85><br><sub>Pierre Riss</sub>](https://github.com/MrZalTy) | [<img src=".github/assets/loan.jpeg" width=85><br><sub>Loan Riyanto</sub>](https://github.com/skl1017) | [<img src=".github/assets/laurent.jpg" width=85><br><sub>Laurent Gonzalez</sub>](https://github.com/lg-epitech)
 | :---: | :---: | :---: |
 
 Manager
