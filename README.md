@@ -67,26 +67,55 @@ Make sure the user associated with these credentials has the necessary permissio
 
 ### Usage
 
-You can use AsyncFlow in two different ways, depending on your needs and project structure:
+First, call
+
+```ts
+import "dotenv/config"
+import  {Asyncflow}  from 'asyncflow';
+```
+
+to retrieve the credentials you declared in the .env file you created at your project's root, as explained above. Then import the `Asyncflow` library. The order is important, since Asyncflow cannot work without having your credentials.
+
+Then, you need to first initialize the Asyncflow client, with the `Asyncflow.init` method. It takes two parameters, `initializeDirectories` and `initializeCallbacks`, that are both `true` by default.
+
+You can disable them if you're not working with them.
+
+```ts
+import "dotenv/config"
+import  {Asyncflow}  from 'asyncflow';
+
+
+const asyncflowClient = await Asyncflow.init({
+  // initializeDirectories: true,
+  // initializeCallbacks: true,
+})
+```
+
+You can create jobs with Asyncflow in two different ways, depending on your needs and project structure:
 
 ## 1. Using Asyncflow SDK wrapper
 
-Use AsyncFlow.init() to initialize the AsyncFlow client, then use the addJob() method to declare a new job by passing a callback function that contains the code to be executed asynchronously.
+ Use the `Asyncflow.addJob` method to declare a new job by passing a callback function that contains the code to be executed asynchronously. It will return an asynchronous function that can then be used to trigger the job you've added. You can pass to the asynchronous function any arguments, it will then be used as a payload that will be passed to the job in the cloud.
 
 ```ts
-import { Asyncflow } from 'asyncflow/sdk';
+import "dotenv/config"
+import  {Asyncflow}  from 'asyncflow';
 
-asyncflowClient = await Asyncflow.init()
+const asyncflowClient = await Asyncflow.init()
 
-export const githubCall = await asyncflowClient.addJob(()=>{
+const githubCall = await asyncflowClient.addJob(()=>{
   const response = await fetch("https://api.github/...");
-  // Math, or something interesting
-  return response.body.ok;
+  return response;
 })
+// The job is now created, you can now invoke it whenever you want
+const githubCallResult = await githubCall()
+console.log(githubCallResult)
 
-export const analysis = await asyncflowClient.addJob((multiplier: number)=>{
+
+const analysis = await asyncflowClient.addJob((multiplier: number)=>{
   return 42 * multiplier;
 })
+const analysisResult = await analysis(21)
 ```
 
 
@@ -122,11 +151,40 @@ export const handler = async (event) => {
 The command above creates a directory inside `asyncflow/` named `foobar` with a `index.js` and `package.json` file inside. The job will have the same name as the directory name. You can then write code inside this directory.
 
 
+You only need to initialize the Asyncflow client — it will automatically create the jobs located in your `asyncflow/` directory, if they don't already exist.
+
+To trigger a job created during initialization, use `Asyncflow.trigger`, which takes two parameters: the name of the job, and an optional configuration object.
+
+You can pass the following options:
 
 ```ts
-import { initializeAsyncflow } from "asyncflow/sdk";
+LambdaResponse<T> {
+  statusCode: number;
+  body: T;
+}
 
-initializeAsyncflow();
+options: {
+  payload?: Record<string, any>;
+  callback?: (a: LambdaResponse<T> | null) => void;
+  onrejected?: (err: any) => void;
+}
+```
+
+```ts
+import "dotenv/config"
+import  {Asyncflow}  from 'asyncflow';
+
+const asyncflowClient = await Asyncflow.init()
+
+asyncflowClient.triggerDirectoryJob('foobar', {
+        callback: (res)=>{
+            console.log(res)
+        },
+        onrejected: (err)=>{
+            console.error(err)
+        },
+        payload: { statusCode: 200, body: 'this is a payload' }
+    })
 ```
 
 As simple as that!
