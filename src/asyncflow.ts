@@ -4,10 +4,7 @@ import { lambdaClient } from "./awsClients";
 import { getUsedEnvVariables } from "./utils/environment";
 import { getCodePolicies, createLambdaRole } from "./utils/roles";
 import { languageConfig } from "./utils/language";
-import {
-  GetFunctionCommand,
-  InvokeCommand,
-} from "@aws-sdk/client-lambda";
+import { GetFunctionCommand, InvokeCommand } from "@aws-sdk/client-lambda";
 import { bundleCode } from "./utils/codeParser";
 import { resolve, dirname } from "path";
 import { getCallerFile } from "./utils/codeParser";
@@ -63,13 +60,12 @@ function isAsync(fn: unknown): fn is (...args: any[]) => Promise<any> {
   return typeof fn === "function" && fn instanceof AsyncFunction;
 }
 
-
 function injectCode<F extends (...args: any[]) => any>(
   fun: SerializableFunction<F>,
-){
-  let respString = 'const response = fn()'
-  if (isAsync(fun)){
-    respString = 'const response = await fn() '
+) {
+  let respString = "const response = fn()";
+  if (isAsync(fun)) {
+    respString = "const response = await fn() ";
   }
 
   return `
@@ -82,7 +78,7 @@ function injectCode<F extends (...args: any[]) => any>(
     statusCode: 200,
     body: JSON.stringify(response),
   };
-};`
+};`;
 }
 
 export class Asyncflow {
@@ -90,16 +86,16 @@ export class Asyncflow {
 
   static async init(
     initializeDirectories: boolean = true,
-    initializeCallbacks: boolean = true,) {
-
+    initializeCallbacks: boolean = true,
+  ) {
     const asyncflowInstance = new Asyncflow();
-    if (initializeDirectories){
-      await initDirectories()
+    if (initializeDirectories) {
+      await initDirectories();
     }
-    if (initializeCallbacks){
-      await initCallbacks()
+    if (initializeCallbacks) {
+      await initCallbacks();
     }
-    return asyncflowInstance
+    return asyncflowInstance;
   }
 
   async addJob<F extends (...args: any[]) => any>(
@@ -111,39 +107,46 @@ export class Asyncflow {
       createHash("sha256").update(contents, "utf8").digest("hex")
     ).slice(0, 64);
 
-    const callerFile = getCallerFile()
-    if (!callerFile){
-      throw new Error()
+    const callerFile = getCallerFile();
+    if (!callerFile) {
+      throw new Error();
     }
     const __dirname = dirname(fileURLToPath(callerFile));
-    const entrypointPath = resolve(__dirname, lambdaName + '.js')
-    const bundledFilePath = resolve(tmpdir(), "asyncflow", lambdaName, "index.js")
-    const zipPath = resolve(tmpdir(), "asyncflow", lambdaName + '.zip')
+    const entrypointPath = resolve(__dirname, lambdaName + ".js");
+    const bundledFilePath = resolve(
+      tmpdir(),
+      "asyncflow",
+      lambdaName,
+      "index.js",
+    );
+    const zipPath = resolve(tmpdir(), "asyncflow", lambdaName + ".zip");
 
-    writeFileSync(entrypointPath, contents)
+    writeFileSync(entrypointPath, contents);
 
     const codeDependencies = await bundleCode(entrypointPath, bundledFilePath);
-    if (!codeDependencies){
-      throw new Error()
+    if (!codeDependencies) {
+      throw new Error();
     }
-    const usedEnvVariables = getUsedEnvVariables([...codeDependencies, entrypointPath]);
+    const usedEnvVariables = getUsedEnvVariables([
+      ...codeDependencies,
+      entrypointPath,
+    ]);
     const codePolicies = getCodePolicies(codeDependencies);
     const lambdaRole = await createLambdaRole(lambdaName, codePolicies);
-    rmSync(entrypointPath)
-    await sleep(10000)
+    rmSync(entrypointPath);
+    await sleep(10000);
 
     const zip = new AdmZip();
-    zip.addLocalFile(bundledFilePath)
+    zip.addLocalFile(bundledFilePath);
     zip.writeZip(zipPath);
-
 
     await sendToLambda(
       zipPath,
       lambdaName,
       usedEnvVariables,
       languageConfig.nodejs,
-      lambdaRole.Role?.Arn
-    )
+      lambdaRole.Role?.Arn,
+    );
 
     return async (...args) => {
       await resourceAvailable(lambdaName);

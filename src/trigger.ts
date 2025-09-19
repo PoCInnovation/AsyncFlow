@@ -4,7 +4,6 @@ import { isEnvironmentValid } from "./utils/credentials";
 import { lambdaClient } from "./awsClients";
 import { initDirectories } from "./initialize";
 
-
 interface TriggerAsyncflowJobOptions<T> {
   callback?: (a: LambdaResponse<T> | null) => void;
   onrejected?: () => void;
