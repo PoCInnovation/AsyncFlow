@@ -1,6 +1,6 @@
 {
   "name": "asyncflow-sdk",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Asyncflow project",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
