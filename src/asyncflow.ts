@@ -63,9 +63,9 @@ function isAsync(fn: unknown): fn is (...args: any[]) => Promise<any> {
 function injectCode<F extends (...args: any[]) => any>(
   fun: SerializableFunction<F>,
 ) {
-  let respString = "const response = fn()";
+  let respString = "const response = fn(event)";
   if (isAsync(fun)) {
-    respString = "const response = await fn() ";
+    respString = "const response = await fn(event) ";
   }
 
   return `
@@ -100,7 +100,7 @@ export class Asyncflow {
 
   async addJob<F extends (...args: any[]) => any>(
     fun: SerializableFunction<F>,
-  ): Promise<(...args: Parameters<F>) => Promise<ReturnType<F>>> {
+  ): Promise<(payload: Record<string, any>) => Promise<ReturnType<F>>> {
     const contents = injectCode(fun);
     const lambdaName = (
       "ASYNCFLOW-CAL-" +
@@ -148,13 +148,13 @@ export class Asyncflow {
       lambdaRole.Role?.Arn,
     );
 
-    return async (...args) => {
+    return async (payload) => {
       await resourceAvailable(lambdaName);
 
       const request = await lambdaClient.send(
         new InvokeCommand({
           FunctionName: lambdaName,
-          Payload: JSON.stringify(args),
+          Payload: JSON.stringify(payload),
         }),
       );
 
