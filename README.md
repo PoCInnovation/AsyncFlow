@@ -95,7 +95,7 @@ You can create jobs with Asyncflow in two different ways, depending on your need
 
 ## 1. Using Asyncflow SDK wrapper
 
- Use the `Asyncflow.addDirectoryJob` method to declare a new job by passing a callback function that contains the code to be executed asynchronously. It will return an asynchronous function that can then be used to trigger the job you've added. You can pass to the asynchronous function any arguments, it will then be used as a payload that will be passed to the job in the cloud.
+ Use the `Asyncflow.addInlineJob` method to declare a new job by passing a callback function that contains the code to be executed asynchronously. It will return an asynchronous function that can then be used to trigger the job you've added. You can pass to the asynchronous function any arguments, it will then be used as a payload that will be passed to the job in the cloud.
 
 ```ts
 import "dotenv/config"
@@ -103,7 +103,7 @@ import  {Asyncflow}  from 'asyncflow';
 
 const asyncflowClient = await Asyncflow.init()
 
-const githubCall = await asyncflowClient.addDirectoryJob(()=>{
+const githubCall = await asyncflowClient.addInlineJob(()=>{
   const response = await fetch("https://api.github/...");
   return response;
 })
@@ -112,7 +112,7 @@ const githubCallResult = await githubCall()
 console.log(githubCallResult)
 
 
-const analysis = await asyncflowClient.addDirectoryJob((multiplier: number)=>{
+const analysis = await asyncflowClient.addInlineJob((multiplier: number)=>{
   return 42 * multiplier;
 })
 const analysisResult = await analysis(21)
@@ -198,7 +198,7 @@ If you're interested in how the project is organized at a higher level, please c
 ## Our PoC team ❤️
 
 Developers
-| [<img src=".github/assets/pierre.png" width=85><br><sub>Pierre Riss</sub>](https://github.com/MrZalTy) | [<img src=".github/assets/loan.jpeg" width=85><br><sub>Loan Riyanto</sub>](https://github.com/skl1017) | [<img src=".github/assets/laurent.jpg" width=85><br><sub>Laurent Gonzalez</sub>](https://github.com/lg-epitech)
+| [<img src=".github/assets/pierre.png" width=85><br><sub>Pierre Riss</sub>](https://github.com/pierreRISS) | [<img src=".github/assets/loan.jpeg" width=85><br><sub>Loan Riyanto</sub>](https://github.com/skl1017) | [<img src=".github/assets/laurent.jpg" width=85><br><sub>Laurent Gonzalez</sub>](https://github.com/lg-epitech)
 | :---: | :---: | :---: |
 
 Manager
