@@ -68,9 +68,9 @@ function isAsync(fn: unknown): fn is (...args: any[]) => Promise<any> {
 function injectCode<F extends (...args: any[]) => any>(
   fun: SerializableFunction<F>,
 ) {
-  let respString = "const response = fn(event)";
+  let respString = "const response = fn(...event)";
   if (isAsync(fun)) {
-    respString = "const response = await fn(event) ";
+    respString = "const response = await fn(...event) ";
   }
 
   return `
