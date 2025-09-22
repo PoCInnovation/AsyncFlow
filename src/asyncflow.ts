@@ -68,9 +68,9 @@ function isAsync(fn: unknown): fn is (...args: any[]) => Promise<any> {
 function injectCode<F extends (...args: any[]) => any>(
   fun: SerializableFunction<F>,
 ) {
-  let respString = "const response = fn()";
+  let respString = "const response = fn(event)";
   if (isAsync(fun)) {
-    respString = "const response = await fn() ";
+    respString = "const response = await fn(event) ";
   }
 
   return `
@@ -110,7 +110,7 @@ export class Asyncflow {
     triggerDirectoryJob(jobName, options);
   }
 
-  async addJob<F extends (...args: any[]) => any>(
+  async addInlineJob<F extends (...args: any[]) => any>(
     fun: SerializableFunction<F>,
   ): Promise<(...args: Parameters<F>) => Promise<ReturnType<F>>> {
     const contents = injectCode(fun);

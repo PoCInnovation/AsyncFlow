@@ -77,7 +77,7 @@ export async function getAllJobs() {
         ExclusiveStartKey,
       }),
     );
-    jobs.push(data.Items);
+    jobs.push(...(data.Items ?? []));
     ExclusiveStartKey = data.LastEvaluatedKey;
   } while (ExclusiveStartKey);
   return jobs;
