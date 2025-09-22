@@ -67,7 +67,7 @@ export async function updateJob(lambda_name: string, integrityHash: string) {
 }
 
 export async function getAllJobs() {
-  let jobs: any[] = [];
+  const jobs: any[] = [];
   let ExclusiveStartKey = undefined;
 
   do {
@@ -77,7 +77,7 @@ export async function getAllJobs() {
         ExclusiveStartKey,
       }),
     );
-    jobs = jobs.concat(data.Items ?? []);
+    jobs.push(...(data.Items ?? []));
     ExclusiveStartKey = data.LastEvaluatedKey;
   } while (ExclusiveStartKey);
   return jobs;
