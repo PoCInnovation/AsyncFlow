@@ -95,7 +95,7 @@ You can create jobs with Asyncflow in two different ways, depending on your need
 
 ## 1. Using Asyncflow SDK wrapper
 
- Use the `Asyncflow.addJob` method to declare a new job by passing a callback function that contains the code to be executed asynchronously. It will return an asynchronous function that can then be used to trigger the job you've added. You can pass to the asynchronous function any arguments, it will then be used as a payload that will be passed to the job in the cloud.
+ Use the `Asyncflow.addDirectoryJob` method to declare a new job by passing a callback function that contains the code to be executed asynchronously. It will return an asynchronous function that can then be used to trigger the job you've added. You can pass to the asynchronous function any arguments, it will then be used as a payload that will be passed to the job in the cloud.
 
 ```ts
 import "dotenv/config"
@@ -103,7 +103,7 @@ import  {Asyncflow}  from 'asyncflow';
 
 const asyncflowClient = await Asyncflow.init()
 
-const githubCall = await asyncflowClient.addJob(()=>{
+const githubCall = await asyncflowClient.addDirectoryJob(()=>{
   const response = await fetch("https://api.github/...");
   return response;
 })
@@ -112,7 +112,7 @@ const githubCallResult = await githubCall()
 console.log(githubCallResult)
 
 
-const analysis = await asyncflowClient.addJob((multiplier: number)=>{
+const analysis = await asyncflowClient.addDirectoryJob((multiplier: number)=>{
   return 42 * multiplier;
 })
 const analysisResult = await analysis(21)
