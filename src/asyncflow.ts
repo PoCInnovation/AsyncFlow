@@ -100,7 +100,7 @@ export class Asyncflow {
 
   async addJob<F extends (...args: any[]) => any>(
     fun: SerializableFunction<F>,
-  ): Promise<(payload: Record<string, any>) => Promise<ReturnType<F>>> {
+  ): Promise<(...args: Parameters<F>) => Promise<ReturnType<F>>> {
     const contents = injectCode(fun);
     const lambdaName = (
       "ASYNCFLOW-CAL-" +
@@ -148,13 +148,13 @@ export class Asyncflow {
       lambdaRole.Role?.Arn,
     );
 
-    return async (payload) => {
+    return async (...args) => {
       await resourceAvailable(lambdaName);
 
       const request = await lambdaClient.send(
         new InvokeCommand({
           FunctionName: lambdaName,
-          Payload: JSON.stringify(payload),
+          Payload: JSON.stringify(args),
         }),
       );
 
