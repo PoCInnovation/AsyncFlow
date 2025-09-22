@@ -39,7 +39,7 @@ function callback<T>(
   }
 }
 
-export function triggerJob<T>(
+export function triggerDirectoryJob<T>(
   jobName: string,
   options?: TriggerAsyncflowJobOptions<T>,
 ) {

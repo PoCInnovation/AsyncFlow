@@ -98,7 +98,7 @@ export class Asyncflow {
     return asyncflowInstance;
   }
 
-  async addJob<F extends (...args: any[]) => any>(
+  async addInlineJob<F extends (...args: any[]) => any>(
     fun: SerializableFunction<F>,
   ): Promise<(...args: Parameters<F>) => Promise<ReturnType<F>>> {
     const contents = injectCode(fun);
