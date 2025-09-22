@@ -95,7 +95,7 @@ export async function initDirectories() {
         ...codeDependencies,
         entrypointPath,
       ]);
-      const codePolicies = getCodePolicies(codeDependencies);
+      const codePolicies = getCodePolicies([...codeDependencies, entrypointPath]);
       const lambdaRole = await createLambdaRole(lambdaName, codePolicies);
 
       zip.addLocalFolder(jobDirectory);
