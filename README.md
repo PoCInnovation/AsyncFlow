@@ -1,8 +1,6 @@
-> If you see this section, you've just created a repository using [PoC Innovation's Open-Source project template](https://github.com/PoCInnovation/open-source-project-template). Check the [getting started guide](./.github/getting-started.md).
-
 ## Development Status
 
-AsyncFlow is currently under prototype development.
+Asyncflow is no longer under development and all features presented below are functional. If you encounter any issues, you can create an issue on this repository.
 
 # AsyncFlow
 
